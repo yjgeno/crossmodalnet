@@ -29,6 +29,7 @@ class sc_Dataset(Dataset):
             else torch.Tensor(data.X)
         )
         self.var_names = data.var_names.to_numpy() # X feature names
+        self.n_feature_X = len(self.var_names)
         self.day = data.obs[time_key].to_numpy()
         self.unique_day = np.unique(data.obs[time_key].values)
         self.celltype = data.obs[celltype_key].to_numpy()
@@ -59,6 +60,7 @@ class sc_Dataset(Dataset):
             else torch.Tensor(data_Y.X)
         )
         self.var_names_Y = data_Y.var_names.to_numpy() # Y feature names
+        self.n_feature_Y = len(self.var_names_Y)
         
         
     def __len__(self):
@@ -71,14 +73,12 @@ class sc_Dataset(Dataset):
         return self.X[idx], self.day[idx], self.celltype_dict[self.celltype[idx]], self.Y[idx] # tuple
 
 
-def load_data(data_path_X, 
-              data_path_Y, 
+def load_data(dataset: sc_Dataset,
               split: float = 0.25, # train/val
               batch_size: int = 128, 
               shuffle: bool = False, 
               **kwargs
               ):
-    dataset = sc_Dataset(data_path_X, data_path_Y)
     n_val = int(split * len(dataset))
     torch.manual_seed(0)
     train_set, val_set = torch.utils.data.random_split(dataset, [len(dataset)-n_val, n_val])
