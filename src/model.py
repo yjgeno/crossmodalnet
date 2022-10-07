@@ -1,6 +1,7 @@
 
 import torch
 import torch.nn.functional as F
+from .loss import NBLoss, GaussNLLLoss, NCorrLoss
 
 
 class MLP(torch.nn.Module):
@@ -33,10 +34,15 @@ class multimodal_AE(torch.nn.Module):
         self,
         n_input: int,
         n_output: int,
+        loss_ae: str = "mse",
     ):
         super(multimodal_AE, self).__init__()
-        self.n_input = n_input
-        self.n_output = n_output
+        self.n_input = n_input 
+        self.n_output = n_output # dim
+        self.loss_ae = loss_ae
+        if loss_ae in ["nb", "gauss"]:
+            n_output = n_output * 2
+
         # set hyperparameters
         self.set_hparams() # self.hparams
 
@@ -52,6 +58,16 @@ class multimodal_AE(torch.nn.Module):
             + self.hparams["autoencoder_width"]
             + [n_output] # *2
         )
+
+        # AE loss
+        if self.loss_ae == "nb":
+            self.loss_fn_ae = NBLoss()
+        elif self.loss_ae == "gauss":
+            self.loss_fn_ae = GaussNLLLoss()
+        elif self.loss_ae == "ncorr":
+            self.loss_fn_ae = NCorrLoss()
+        elif self.loss_ae == "mse":
+            self.loss_fn_ae = torch.nn.MSELoss()
 
 
     def set_hparams(self):
@@ -79,11 +95,40 @@ class multimodal_AE(torch.nn.Module):
         Predict Y given X.
         """
         latent_basal = self.encoder(X)
-        X_reconstructions = self.decoder(latent_basal)
+        reconstructions = self.decoder(latent_basal)
+
+        # dim = X_reconstructions.shape[1]//2 # self.n_output
+        if self.loss_ae == "gauss":
+            # convert variance estimates to a positive value in [1e-3, inf)        
+            pred_means = reconstructions[:, :self.n_output]
+            pred_vars = F.softplus(reconstructions[:, self.n_output:]).add(1e-3) # constrain positive var
+            # X_vars = reconstructions[:, dim:].exp().add(1).log().add(1e-3)
+            reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
+
+        if self.loss_ae == "nb":
+            pred_means = F.softplus(reconstructions[:, :self.n_output]).add(1e-3)
+            pred_vars = F.softplus(reconstructions[:, self.n_output:]).add(1e-3)
+            # reconstructions[:, :dim] = torch.clamp(reconstructions[:, :dim], min=1e-4, max=1e4)
+            # reconstructions[:, dim:] = torch.clamp(reconstructions[:, dim:], min=1e-4, max=1e4)
+            reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
 
         if return_latent:
-            return X_reconstructions, latent_basal
-        return X_reconstructions
+            return reconstructions, latent_basal
+        return reconstructions
+
+
+    def sample_pred_from(self, reconstructions):
+        if not self.loss_ae in ["nb", "gauss"]:
+            raise ValueError("")
+        else:
+            pred_means, pred_vars = reconstructions[:, :self.n_output], reconstructions[:, self.n_output:]
+            if self.loss_ae == "gauss":
+                pred_means = torch.normal(mean = pred_means, std = pred_vars)
+                pred_means = torch.clamp(pred_means, min=0., max=1e4) # TODO
+            if self.loss_ae == "nb":
+                pass # TODO
+            return pred_means
+
 
 
 def save_model(model, name: str = "multimodal"):
