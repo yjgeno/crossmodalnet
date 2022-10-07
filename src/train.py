@@ -51,10 +51,15 @@ def train(args):
             X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
             optimizer.zero_grad()
             pred_Y_exp = model(X_exp)
-            loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
+            if model.loss_ae == "custom_":
+                alpha, beta = args.alpha, args.beta # TODO
+                pred_Y_means = pred_Y_exp[:, :model.n_output]
+                loss = model.loss_fn_mse(pred_Y_means, Y_exp) + alpha*model.loss_fn_ncorr(pred_Y_means, Y_exp) + beta*model.loss_fn_gauss(pred_Y_exp, Y_exp)
+            else:
+                loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             train_logger.add_scalar("loss", loss.item(), global_step)
             loss_sum += loss.item()
-            if model.loss_ae in ["nb", "gauss"]:
+            if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
             corr_sum_train += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
             loss.backward()
@@ -62,7 +67,7 @@ def train(args):
             global_step += 1
         train_logger.add_scalar("corr", corr_sum_train/len(train_set), global_step)
         if args.verbose:
-            print("epoch: {:03d}, global_step: {:d}, loss: {:.4f}, corr: {:.4f}".format(epoch, global_step, loss_sum/len(train_set), corr_sum_train/len(train_set)))
+            print("(Train) epoch: {:03d}, global_step: {:d}, loss: {:.4f}, corr: {:.4f}".format(epoch, global_step, loss_sum/len(train_set), corr_sum_train/len(train_set)))
 
         model.eval()
         with torch.no_grad():
@@ -73,16 +78,16 @@ def train(args):
                 pred_Y_exp = model(X_exp)
                 # loss = loss_fn_ae(pred_Y_exp, Y_exp)
                 # valid_logger.add_scalar('loss', loss.item(), global_step)
-                if model.loss_ae in ["nb", "gauss"]:
+                if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
                 corr_sum_val += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
             valid_logger.add_scalar("corr", corr_sum_val/len(val_set), global_step)
             if args.verbose:
-                print("epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
+                print("(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
 
         if args.schedule_lr:
             train_logger.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step)
-            scheduler.step(corr_sum/len(val_set)) # update according to valid set
+            scheduler.step(corr_sum_val/len(val_set)) # update according to valid set
 
     if args.save:
         save_model(model)
@@ -94,9 +99,11 @@ if __name__ == "__main__":
     parser.add_argument("-D", "--data_dir", type=str, required=True)
     parser.add_argument("--log_dir", type=str, required=True)
     parser.add_argument("-L", "--loss_ae", type=str, default="mse")
-    parser.add_argument('-O', '--optimizer', type = str, default = 'Adam')
-    parser.add_argument('-lr', '--learning_rate', type = float, default = 0.001)
-    parser.add_argument('--schedule_lr', action = 'store_true')
+    parser.add_argument("-O", "--optimizer", type=str, default="Adam")
+    parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
+    parser.add_argument("--alpha", type=float, default=1., help="weight for ensemble loss")
+    parser.add_argument("--beta", type=float, default=1., help="weight for ensemble loss")
+    parser.add_argument('--schedule_lr', action = "store_true")
     parser.add_argument("-N", "--n_epochs", type=int, default=100)
     parser.add_argument("-B", "--batch_size", type=int, default=256)
     parser.add_argument("-v", "--verbose", action="store_true")

@@ -40,7 +40,8 @@ class multimodal_AE(torch.nn.Module):
         self.n_input = n_input 
         self.n_output = n_output # dim
         self.loss_ae = loss_ae
-        if loss_ae in ["nb", "gauss"]:
+        self.loss_type1, self.loss_type2 = ["mse", "ncorr"], ["nb", "gauss", "custom_"]
+        if loss_ae in self.loss_type2:
             n_output = n_output * 2
 
         # set hyperparameters
@@ -68,6 +69,10 @@ class multimodal_AE(torch.nn.Module):
             self.loss_fn_ae = NCorrLoss()
         elif self.loss_ae == "mse":
             self.loss_fn_ae = torch.nn.MSELoss()
+        elif self.loss_ae == "custom_":
+            self.loss_fn_mse, self.loss_fn_ncorr, self.loss_fn_gauss = torch.nn.MSELoss(), NCorrLoss(), GaussNLLLoss()
+        else:
+            raise Exception("")
 
 
     def set_hparams(self):
@@ -112,22 +117,31 @@ class multimodal_AE(torch.nn.Module):
             # reconstructions[:, dim:] = torch.clamp(reconstructions[:, dim:], min=1e-4, max=1e4)
             reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
 
+        if self.loss_ae == "custom_": # TODO
+            pred_means = reconstructions[:, :self.n_output]
+            pred_vars = F.softplus(reconstructions[:, self.n_output:]).add(1e-3)
+            reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
+
         if return_latent:
             return reconstructions, latent_basal
         return reconstructions
 
 
     def sample_pred_from(self, reconstructions):
-        if not self.loss_ae in ["nb", "gauss"]:
+        if not self.loss_ae in self.loss_type2:
             raise ValueError("")
         else:
             pred_means, pred_vars = reconstructions[:, :self.n_output], reconstructions[:, self.n_output:]
             if self.loss_ae == "gauss":
                 pred_means = torch.normal(mean = pred_means, std = pred_vars)
-                pred_means = torch.clamp(pred_means, min=0., max=1e4) # TODO
+                # pred_means = torch.clamp(pred_means, min=0., max=1e4) # neg in protein counts 
             if self.loss_ae == "nb":
                 pass # TODO
-            return pred_means
+            if self.loss_ae == "custom_":
+                pred_means = torch.normal(mean = pred_means, std = pred_vars)
+                # print("custom", torch.sum(pred==0)/(pred.shape[0]*pred.shape[1]))
+                # pred_means = torch.clamp(pred_means, min=0., max=1e4) # neg in protein counts 
+            return pred_means # TODO
 
 
 
