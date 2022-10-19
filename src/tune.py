@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import ray
 from ray import air, tune
 from ray.air import session
@@ -11,10 +10,12 @@ from .utils import corr_score
 
 
 hyperparams = {
-"lr": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(1, 4))),
+"lr": tune.qloguniform(1e-4, 1e-1, 5e-5),
 "seed": tune.randint(0, 10000),
 "optimizer": tune.choice(["Adam", "SGD"]),
-"loss_ae": tune.choice(["mse", "nb", "gauss", "ncorr"]),
+"loss_ae": tune.choice(["mse", "ncorr", "gauss", "nb", "custom_"]),
+"alpha": tune.quniform(0, 1, 0.1),
+"beta": tune.quniform(0, 1, 0.1),
 }
 
 
@@ -49,9 +50,14 @@ def train(config):
             X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
             optimizer.zero_grad()
             pred_Y_exp = model(X_exp)
-            loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
+            if model.loss_ae == "custom_":
+                alpha, beta = config["alpha"], config["beta"] 
+                pred_Y_means = pred_Y_exp[:, :model.n_output]
+                loss = model.loss_fn_mse(pred_Y_means, Y_exp) + alpha*model.loss_fn_ncorr(pred_Y_means, Y_exp) + beta*model.loss_fn_gauss(pred_Y_exp, Y_exp)
+            else:
+                loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             loss_sum += loss.item()
-            if model.loss_ae in ["nb", "gauss"]:
+            if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
             corr_sum_train += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
             loss.backward()
@@ -65,7 +71,7 @@ def train(config):
                 X_exp, day, celltype, Y_exp = sample
                 X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
                 pred_Y_exp = model(X_exp)
-                if model.loss_ae in ["nb", "gauss"]:
+                if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
                 corr_sum_val += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
 
