@@ -41,7 +41,7 @@ class multimodal_AE(torch.nn.Module):
         self.n_input = n_input 
         self.n_output = n_output # dim
         self.loss_ae = loss_ae
-        self.loss_type1, self.loss_type2 = ["mse", "ncorr"], ["nb", "gauss", "custom_"]
+        self.loss_type1, self.loss_type2 = ["mse", "L1", "ncorr"], ["nb", "gauss", "custom_"]
         if loss_ae in self.loss_type2:
             n_output = n_output * 2
 
@@ -57,7 +57,7 @@ class multimodal_AE(torch.nn.Module):
 
         self.decoder = MLP(
             [self.hparams["latent_dim"]]
-            + self.hparams["autoencoder_width"]
+            # + self.hparams["autoencoder_width"]
             + [n_output] # *2
         )
 
@@ -70,6 +70,8 @@ class multimodal_AE(torch.nn.Module):
             self.loss_fn_ae = NCorrLoss()
         elif self.loss_ae == "mse":
             self.loss_fn_ae = torch.nn.MSELoss()
+        elif self.loss_ae == "L1":
+            self.loss_fn_ae = torch.nn.L1Loss()
         elif self.loss_ae == "custom_":
             self.loss_fn_mse, self.loss_fn_ncorr, self.loss_fn_gauss = torch.nn.MSELoss(), NCorrLoss(), GaussNLLLoss()
         else:
@@ -78,8 +80,8 @@ class multimodal_AE(torch.nn.Module):
 
     def set_hparams(self, hparams_dict: dict = None):
         self._hparams = {
-            "latent_dim": 128,
-            "autoencoder_width": [512, 256],
+            "latent_dim": 32,
+            "autoencoder_width": [512, 128],
         }  # set default
         if hparams_dict is not None: 
             for key in hparams_dict:
