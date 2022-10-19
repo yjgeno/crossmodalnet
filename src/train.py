@@ -61,7 +61,7 @@ def train(args):
             loss_sum += loss.item()
             if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
-            corr_sum_train += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
+            corr_sum_train += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
             loss.backward()
             optimizer.step()
             global_step += 1
@@ -80,7 +80,7 @@ def train(args):
                 # valid_logger.add_scalar('loss', loss.item(), global_step)
                 if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
-                corr_sum_val += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
+                corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
             valid_logger.add_scalar("corr", corr_sum_val/len(val_set), global_step)
             if args.verbose:
                 print("(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
