@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import ray
 from ray import air, tune
 from ray.air import session
@@ -14,10 +15,12 @@ hyperparams = {
 "seed": tune.randint(0, 10000),
 "optimizer": tune.choice(["Adam", "SGD"]),
 "loss_ae": tune.choice(["mse", "ncorr", "gauss", "nb", "custom_"]),
+"weight_decay": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
 "alpha": tune.quniform(0, 1, 0.1),
 "beta": tune.quniform(0, 1, 0.1),
-}
-
+"hparams_dict": {"latent_dim": tune.choice([64, 32]), 
+                 "autoencoder_width": tune.choice([[512, 128], [256]])},
+                             }
 
 def train(config): 
     DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "toy_data")
@@ -34,13 +37,14 @@ def train(config):
     model = multimodal_AE(n_input = dataset.n_feature_X, 
                           n_output= dataset.n_feature_Y,
                           loss_ae = config["loss_ae"],
+                          hparams_dict = config["hparams_dict"],
                           )
     model = model.to(device)  
     # optimizer
     if config["optimizer"] == "Adam":
-        optimizer = torch.optim.Adam(model.parameters(), lr = config["lr"], weight_decay = 1e-5)
+        optimizer = torch.optim.Adam(model.parameters(), lr = config["lr"], weight_decay = config["weight_decay"])
     elif config["optimizer"] == "SGD":
-        optimizer = torch.optim.SGD(model.parameters(), lr = config["lr"], momentum = 0.9, weight_decay = 5e-4)
+        optimizer = torch.optim.SGD(model.parameters(), lr = config["lr"], momentum = 0.9, weight_decay = config["weight_decay"])
 
     while True: # epochs < max_num_epochs
         model.train()
@@ -59,7 +63,7 @@ def train(config):
             loss_sum += loss.item()
             if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
-            corr_sum_train += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
+            corr_sum_train += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
             loss.backward()
             optimizer.step()
 
@@ -73,7 +77,7 @@ def train(config):
                 pred_Y_exp = model(X_exp)
                 if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
-                corr_sum_val += corr_score(Y_exp.detach().numpy(), pred_Y_exp.detach().numpy())
+                corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
 
         # record metrics from valid set
         session.report({"loss": loss_sum/len(train_set), 
@@ -86,11 +90,13 @@ def train(config):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument("--trials", type=int, default=50)
+    parser.add_argument("--to_file", type=str, default="raytune_results", help="save final tuning results")
     parser.add_argument("--test", action="store_true", help="quick testing")
     args = parser.parse_args()
     
-    ray.init(num_cpus = 2 if args.test else None)
-    resources_per_trial = {"cpu": 1, "gpu": 0}  # set this for GPUs
+    ray.init(num_cpus = 2 if args.test else os.cpu_count()-1)
+    resources_per_trial = {"cpu": 1, "gpu": 0 if args.test else 1}  # set this for GPUs
     tuner = tune.Tuner(
         tune.with_resources(train, resources = resources_per_trial),
         tune_config = tune.TuneConfig(
@@ -101,7 +107,7 @@ if __name__ == "__main__":
                 grace_period = 10, # stop at least after this iteration
                 reduction_factor = 2
                 ), # for early stopping
-            num_samples = 2 if args.test else 50, # trials
+            num_samples = 2 if args.test else args.trials, # trials
         ),
         run_config = air.RunConfig(
             name="exp",
@@ -114,5 +120,7 @@ if __name__ == "__main__":
     )
     results = tuner.fit()
     print("Best config is:", results.get_best_result().config)
+    save_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), f"{args.to_file}.csv")
+    results.get_dataframe().to_csv(save_path)
     # python -m src.tune --test
 

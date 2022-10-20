@@ -35,6 +35,7 @@ class multimodal_AE(torch.nn.Module):
         n_input: int,
         n_output: int,
         loss_ae: str = "mse",
+        hparams_dict: dict = None,
     ):
         super(multimodal_AE, self).__init__()
         self.n_input = n_input 
@@ -45,7 +46,7 @@ class multimodal_AE(torch.nn.Module):
             n_output = n_output * 2
 
         # set hyperparameters
-        self.set_hparams() # self.hparams
+        self.set_hparams(hparams_dict = hparams_dict)
 
         # AE
         self.encoder = MLP(
@@ -75,12 +76,17 @@ class multimodal_AE(torch.nn.Module):
             raise Exception("")
 
 
-    def set_hparams(self):
+    def set_hparams(self, hparams_dict: dict = None):
         self._hparams = {
             "latent_dim": 128,
             "autoencoder_width": [512, 256],
-        }
-        return self._hparams
+        }  # set default
+        if hparams_dict is not None: 
+            for key in hparams_dict:
+                try:
+                    self._hparams[key] = hparams_dict[key] 
+                except KeyError:
+                    continue
 
 
     @property
@@ -88,7 +94,12 @@ class multimodal_AE(torch.nn.Module):
         """
         Returns a list of the hyper-parameters.
         """
-        return self.set_hparams()
+        return self._hparams
+
+
+    # @hparams.setter
+    # def hparams(self, hparams_dict: dict):
+    #     self._hparams = hparams_dict
 
 
     def forward(
