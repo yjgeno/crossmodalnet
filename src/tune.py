@@ -33,13 +33,12 @@ def train(config):
             )
     train_set, val_set = load_data(dataset)
     torch.manual_seed(config["seed"]) 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = multimodal_AE(n_input = dataset.n_feature_X, 
                           n_output= dataset.n_feature_Y,
                           loss_ae = "multitask",
                           hparams_dict = config["hparams_dict"], # set alpha
                           )
-    model = model.to(device)  
+    
     # optimizer
     if config["optimizer"] == "Adam":
         opt_1 = torch.optim.Adam(model.parameters(), lr = config["lr_1"], weight_decay = config["weight_decay"])
@@ -54,7 +53,7 @@ def train(config):
         loss_sum, loss_1_sum, loss_2_sum, corr_sum_train = 0., 0., 0., 0.
         for sample in train_set:
             X_exp, day, celltype, Y_exp = sample
-            X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+            X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)
             
             pred_Y_exp = model(X_exp)
             loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp)
@@ -109,7 +108,7 @@ def train(config):
             corr_sum_val = 0.
             for sample in val_set:
                 X_exp, day, celltype, Y_exp = sample
-                X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+                X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)
                 pred_Y_exp = model(X_exp)
                 corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
         FIRST_EPOCH = False
@@ -118,8 +117,8 @@ def train(config):
         session.report({"loss": loss_sum/len(train_set), 
                         "loss_1": loss_1_sum/len(train_set),
                         "loss_2": loss_2_sum/len(train_set),
-                        "weight_loss_1": model.weight_params[0].item(), 
-                        "weight_loss_2": model.weight_params[1].item(), 
+                        "normalized_weight_loss_1": model.weight_params[0].item(), 
+                        "normalized_weight_loss_2": model.weight_params[1].item(), 
                         "corr_train": corr_sum_train/len(train_set),
                         "corr_val": corr_sum_val/len(val_set)},
                         ) # call: shown as training_iteration

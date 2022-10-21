@@ -20,13 +20,11 @@ def train(args):
     train_set, val_set = load_data(dataset)
 
     # init model
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model = multimodal_AE(n_input = dataset.n_feature_X, 
                           n_output= dataset.n_feature_Y,
                           loss_ae = args.loss_ae,
                           )
     print(model)
-    model = model.to(device)
 
     # optimizer
     if args.optimizer == "Adam":
@@ -49,10 +47,9 @@ def train(args):
         loss_sum, loss_1_sum, loss_2_sum, corr_sum_train = 0., 0., 0., 0.
         for sample in train_set:
             X_exp, day, celltype, Y_exp = sample
-            X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
-            
+            X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)   
             pred_Y_exp = model(X_exp)
-            loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp)
+            loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp) # normalized weight*
             loss_2 = model.weight_params[1] * model.loss_fn_2(pred_Y_exp, Y_exp)
             if epoch == 0:
                 l0_1, l0_2 = loss_1.data, loss_2.data
@@ -93,7 +90,7 @@ def train(args):
             # calculate the gradient loss
             Lgrad = torch.add(model.grad_loss(G1, C1), model.grad_loss(G2, C2)) # sum of L1 loss
             train_logger.add_scalar("Lgrad", Lgrad.detach().item(), global_step)
-            # print("orig weights are:", model.weight_loss_1, model.weight_loss_2) # values without normalizing
+            # print("orig weights are:", [w.detach().cpu().numpy() for w in model.weight_params]) # raw before updating
             Lgrad.backward()
             
             # update loss weights
@@ -104,8 +101,8 @@ def train(args):
             # normalize the loss weights: sum to 2
             coef = 2/torch.add(model.weight_loss_1, model.weight_loss_2)
             model.weight_params = [coef*model.weight_loss_1, coef*model.weight_loss_2] # update
-            # print("updated weights are:", model.weight_loss_1, model.weight_loss_2) # orig weights
-            # print("normalized weights are:", model.weight_params)
+            # print("updated raw weights are:", model.weight_loss_1.item(), model.weight_loss_2.item()) # raw after updating
+            # print("normalized updated weights are:", [w.detach().cpu().numpy() for w in model.weight_params])
             
             global_step += 1
 
@@ -116,8 +113,8 @@ def train(args):
                                 }, global_step)
         train_logger.add_scalars("weight_info",
                                 {
-                                 "weight_loss_1": model.weight_params[0].item(), 
-                                 "weight_loss_2": model.weight_params[1].item(),                                
+                                 "normalized_weight_loss_1": model.weight_params[0].item(), 
+                                 "normalized_weight_loss_2": model.weight_params[1].item(),                                
                                 }, global_step)
         if args.verbose:
             print("(Train) epoch: {:03d}, global_step: {:d}, loss: {:.4f}, corr: {:.4f}".format(epoch, global_step, loss_sum/len(train_set), corr_sum_train/len(train_set)))
@@ -127,7 +124,7 @@ def train(args):
             corr_sum_val = 0.
             for sample in val_set:
                 X_exp, day, celltype, Y_exp = sample
-                X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+                X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)
                 pred_Y_exp = model(X_exp)
                 corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
             train_logger.add_scalars("corr_info", 

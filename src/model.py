@@ -35,11 +35,13 @@ class multimodal_AE(torch.nn.Module):
         n_output: int,
         loss_ae: str = "multitask",
         hparams_dict: dict = None,
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     ):
         super(multimodal_AE, self).__init__()
         self.n_input = n_input 
         self.n_output = n_output # dim
         self.loss_ae = loss_ae
+        self.device = device
 
         # set hyperparameters
         self.set_hparams(hparams_dict = hparams_dict)
@@ -61,11 +63,15 @@ class multimodal_AE(torch.nn.Module):
         if self.loss_ae == "multitask":
             self.loss_fn_1, self.loss_fn_2 = NCorrLoss(), torch.nn.MSELoss()
             self.grad_loss = torch.nn.L1Loss()
-            self.weight_loss_1 = torch.FloatTensor([1]).clone().detach().requires_grad_(True)
-            self.weight_loss_2 = torch.FloatTensor([1]).clone().detach().requires_grad_(True)
+            # self.weight_loss_1 = torch.FloatTensor([1]).clone().detach().requires_grad_(True).to(self.device)
+            # self.weight_loss_2 = torch.FloatTensor([1]).clone().detach().requires_grad_(True).to(self.device)
+            self.weight_loss_1 = torch.tensor([1.], requires_grad = True, device = self.device)
+            self.weight_loss_2 = torch.tensor([1.], requires_grad = True, device = self.device)
             self.weight_params = [self.weight_loss_1, self.weight_loss_2]
         else:
             raise Exception("")
+
+        self.to(self.device) # send model to CUDA
 
 
     def set_hparams(self, hparams_dict: dict = None):
@@ -93,6 +99,12 @@ class multimodal_AE(torch.nn.Module):
     # @hparams.setter
     # def hparams(self, hparams_dict: dict):
     #     self._hparams = hparams_dict
+
+    def move_inputs_(self, *args):
+        """
+        Move inputs to CUDA.
+        """
+        return [x.to(self.device) for x in args]
 
 
     def forward(
