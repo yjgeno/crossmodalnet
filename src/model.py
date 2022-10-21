@@ -1,6 +1,5 @@
 
 import torch
-import torch.nn.functional as F
 from .loss import NBLoss, GaussNLLLoss, NCorrLoss
 
 
@@ -34,16 +33,13 @@ class multimodal_AE(torch.nn.Module):
         self,
         n_input: int,
         n_output: int,
-        loss_ae: str = "mse",
+        loss_ae: str = "multitask",
         hparams_dict: dict = None,
     ):
         super(multimodal_AE, self).__init__()
         self.n_input = n_input 
         self.n_output = n_output # dim
         self.loss_ae = loss_ae
-        self.loss_type1, self.loss_type2 = ["mse", "L1", "ncorr"], ["nb", "gauss", "custom_"]
-        if loss_ae in self.loss_type2:
-            n_output = n_output * 2
 
         # set hyperparameters
         self.set_hparams(hparams_dict = hparams_dict)
@@ -62,18 +58,12 @@ class multimodal_AE(torch.nn.Module):
         )
 
         # AE loss
-        if self.loss_ae == "nb":
-            self.loss_fn_ae = NBLoss()
-        elif self.loss_ae == "gauss":
-            self.loss_fn_ae = GaussNLLLoss()
-        elif self.loss_ae == "ncorr":
-            self.loss_fn_ae = NCorrLoss()
-        elif self.loss_ae == "mse":
-            self.loss_fn_ae = torch.nn.MSELoss()
-        elif self.loss_ae == "L1":
-            self.loss_fn_ae = torch.nn.L1Loss()
-        elif self.loss_ae == "custom_":
-            self.loss_fn_mse, self.loss_fn_ncorr, self.loss_fn_gauss = torch.nn.MSELoss(), NCorrLoss(), GaussNLLLoss()
+        if self.loss_ae == "multitask":
+            self.loss_fn_1, self.loss_fn_2 = NCorrLoss(), torch.nn.MSELoss()
+            self.grad_loss = torch.nn.L1Loss()
+            self.weight_loss_1 = torch.FloatTensor([1]).clone().detach().requires_grad_(True)
+            self.weight_loss_2 = torch.FloatTensor([1]).clone().detach().requires_grad_(True)
+            self.weight_params = [self.weight_loss_1, self.weight_loss_2]
         else:
             raise Exception("")
 
@@ -82,6 +72,7 @@ class multimodal_AE(torch.nn.Module):
         self._hparams = {
             "latent_dim": 32,
             "autoencoder_width": [512, 128],
+            "alpha": 1.,
         }  # set default
         if hparams_dict is not None: 
             for key in hparams_dict:
@@ -115,50 +106,13 @@ class multimodal_AE(torch.nn.Module):
         latent_basal = self.encoder(X)
         reconstructions = self.decoder(latent_basal)
 
-        # dim = X_reconstructions.shape[1]//2 # self.n_output
-        if self.loss_ae == "gauss":
-            # convert variance estimates to a positive value in [1e-3, inf)        
-            pred_means = reconstructions[:, :self.n_output]
-            pred_vars = F.softplus(reconstructions[:, self.n_output:]).add(1e-3) # constrain positive var
-            # X_vars = reconstructions[:, dim:].exp().add(1).log().add(1e-3)
-            reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
-
-        if self.loss_ae == "nb":
-            pred_means = F.softplus(reconstructions[:, :self.n_output]).add(1e-3)
-            pred_vars = F.softplus(reconstructions[:, self.n_output:]).add(1e-3)
-            # reconstructions[:, :dim] = torch.clamp(reconstructions[:, :dim], min=1e-4, max=1e4)
-            # reconstructions[:, dim:] = torch.clamp(reconstructions[:, dim:], min=1e-4, max=1e4)
-            reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
-
-        if self.loss_ae == "custom_": # TODO
-            pred_means = reconstructions[:, :self.n_output]
-            pred_vars = F.softplus(reconstructions[:, self.n_output:]).add(1e-3)
-            reconstructions = torch.cat([pred_means, pred_vars], dim = 1)
-
         if return_latent:
             return reconstructions, latent_basal
         return reconstructions
 
 
-    def sample_pred_from(self, reconstructions):
-        if not self.loss_ae in self.loss_type2:
-            raise ValueError("")
-        else:
-            pred_means, pred_vars = reconstructions[:, :self.n_output], reconstructions[:, self.n_output:]
-            if self.loss_ae == "gauss":
-                pred_means = torch.normal(mean = pred_means, std = pred_vars)
-                # pred_means = torch.clamp(pred_means, min=0., max=1e4) # neg in protein counts 
-            if self.loss_ae == "nb":
-                pass # TODO
-            if self.loss_ae == "custom_":
-                pred_means = torch.normal(mean = pred_means, std = pred_vars)
-                # print("custom", torch.sum(pred==0)/(pred.shape[0]*pred.shape[1]))
-                # pred_means = torch.clamp(pred_means, min=0., max=1e4) # neg in protein counts 
-            return pred_means # TODO
 
-
-
-def save_model(model, name: str = "multimodal"):
+def save_model(model, name: str = "multitask"):
     from torch import save
     import os
     if isinstance(model, multimodal_AE):
@@ -166,7 +120,7 @@ def save_model(model, name: str = "multimodal"):
     raise ValueError("model type '%s' not supported!" % str(type(model)))
 
 
-def load_model(name: str = "multimodal", **kwargs): # num_genes, num_drugs, loss_ae
+def load_model(name: str = "multitask", **kwargs): # num_genes, num_drugs, loss_ae
     from torch import load
     import os
     r = multimodal_AE(**kwargs)
