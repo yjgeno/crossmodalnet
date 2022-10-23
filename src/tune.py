@@ -42,12 +42,12 @@ def train(config):
     # optimizer
     if config["optimizer"] == "Adam":
         opt_1 = torch.optim.Adam(model.parameters(), lr = config["lr_1"], weight_decay = config["weight_decay"])
-        opt_2 = torch.optim.Adam(model.weight_params, lr = config["lr_2"], weight_decay = config["weight_decay"])
+        opt_2 = torch.optim.Adam(model.weight_params, lr = config["lr_2"])
     elif config["optimizer"] == "SGD":
         opt_1 = torch.optim.SGD(model.parameters(), lr = config["lr_1"], momentum = 0.9, weight_decay = config["weight_decay"])
-        opt_2 = torch.optim.SGD(model.weight_params, lr = config["lr_2"], momentum = 0.9, weight_decay = config["weight_decay"])
+        opt_2 = torch.optim.SGD(model.weight_params, lr = config["lr_2"])
 
-    FIRST_EPOCH = True
+    FIRST_STEP = True
     while True: # epochs < max_num_epochs
         model.train()
         loss_sum, loss_1_sum, loss_2_sum, corr_sum_train = 0., 0., 0., 0.
@@ -58,8 +58,9 @@ def train(config):
             pred_Y_exp = model(X_exp)
             loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp)
             loss_2 = model.weight_params[1] * model.loss_fn_2(pred_Y_exp, Y_exp)
-            if FIRST_EPOCH:
-                l0_1, l0_2 = loss_1.data, loss_2.data
+            if FIRST_STEP:
+                l0_1, l0_2 = loss_1.detach(), loss_2.detach()
+                FIRST_STEP = False
             loss_1_sum += loss_1.item()
             loss_2_sum += loss_2.item()
             loss = torch.div(torch.add(loss_1,loss_2), 2)
@@ -110,8 +111,7 @@ def train(config):
                 X_exp, day, celltype, Y_exp = sample
                 X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)
                 pred_Y_exp = model(X_exp)
-                corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
-        FIRST_EPOCH = False
+                corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())     
 
         # record metrics
         session.report({"loss": loss_sum/len(train_set), 

@@ -28,11 +28,11 @@ def train(args):
 
     # optimizer
     if args.optimizer == "Adam":
-        opt_1 = torch.optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = 1e-5)
-        opt_2 = torch.optim.Adam(model.weight_params, lr = args.learning_rate, weight_decay = 1e-5)
+        opt_1 = torch.optim.Adam(model.parameters(), lr = args.learning_rate1, weight_decay = 7e-6)
+        opt_2 = torch.optim.Adam(model.weight_params, lr = args.learning_rate2) # no decay for loss weight
     elif args.optimizer == "SGD":
-        opt_1 = torch.optim.SGD(model.parameters(), lr = args.learning_rate, momentum = 0.9, weight_decay = 5e-4)
-        opt_2 = torch.optim.SGD(model.weight_params, lr = args.learning_rate, momentum = 0.9, weight_decay = 5e-4)
+        opt_1 = torch.optim.SGD(model.parameters(), lr = args.learning_rate1, momentum = 0.9)
+        opt_2 = torch.optim.SGD(model.weight_params, lr = args.learning_rate2)
 
     
     # logging
@@ -49,10 +49,10 @@ def train(args):
             X_exp, day, celltype, Y_exp = sample
             X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)   
             pred_Y_exp = model(X_exp)
-            loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp) # normalized weight*
+            loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp) # normalized weight*loss
             loss_2 = model.weight_params[1] * model.loss_fn_2(pred_Y_exp, Y_exp)
-            if epoch == 0:
-                l0_1, l0_2 = loss_1.data, loss_2.data
+            if global_step == 0:
+                l0_1, l0_2 = loss_1.detach(), loss_2.detach()
                 # print("l0", l0_1, l0_2)
             loss_1_sum += loss_1.item()
             loss_2_sum += loss_2.item()
@@ -62,12 +62,12 @@ def train(args):
             opt_1.zero_grad()
             loss.backward(retain_graph=True) # retain_graph for G1R and G2R
             
-            # calculate norm of current gradient w.r.t. 1st layer param W
-            W = list(model.parameters())[0] # fixed, not a parameter for Lgrad
+            # calculate norm of current gradient w.r.t. 1st layer param W: influence of loss on overall training
+            W = list(model.parameters())[0] # not a parameter for Lgrad
             # print("W", W.shape)
-            G1R = torch.autograd.grad(loss_1, W, retain_graph=True, create_graph=True) # tuple of len 1 
+            G1R = torch.autograd.grad(loss_1, W, retain_graph=True, create_graph=True) # tuple of len 1, retain for grad(loss_2, W)
             G1 = torch.norm(G1R[0], 2) # norm of the gradient, tensor of []
-            G2R = torch.autograd.grad(loss_2, W, retain_graph=True, create_graph=True)
+            G2R = torch.autograd.grad(loss_2, W, retain_graph=True, create_graph=True) # retain for Lgrad.backward()
             G2 = torch.norm(G2R[0], 2)
             G_avg = torch.div(torch.add(G1, G2), 2) 
             
@@ -76,7 +76,7 @@ def train(args):
             lhat_2 = torch.div(loss_2, l0_2)
             lhat_avg = torch.div(torch.add(lhat_1, lhat_2), 2)
             
-            # calculate relative inverse training rates: lower -> train faster
+            # calculate relative inverse training rates (inv_rate sum to 2): less than 1 -> train faster; larger than 1: slower
             inv_rate_1 = torch.div(lhat_1, lhat_avg)
             inv_rate_2 = torch.div(lhat_2, lhat_avg)
             
@@ -85,12 +85,13 @@ def train(args):
             C2 = G_avg*(inv_rate_2)**model.hparams["alpha"]
             C1 = C1.detach().squeeze() # tensor of []
             C2 = C2.detach().squeeze()
-            
-            opt_2.zero_grad()
+
+            # IMPORTANT: clean accumulated gradients of loss w.r.t. loss weights
+            opt_2.zero_grad() 
             # calculate the gradient loss
             Lgrad = torch.add(model.grad_loss(G1, C1), model.grad_loss(G2, C2)) # sum of L1 loss
             train_logger.add_scalar("Lgrad", Lgrad.detach().item(), global_step)
-            # print("orig weights are:", [w.detach().cpu().numpy() for w in model.weight_params]) # raw before updating
+            # print("orig weights are:", [w.item() for w in model.weight_params]) # raw before updating
             Lgrad.backward()
             
             # update loss weights
@@ -101,8 +102,7 @@ def train(args):
             # normalize the loss weights: sum to 2
             coef = 2/torch.add(model.weight_loss_1, model.weight_loss_2)
             model.weight_params = [coef*model.weight_loss_1, coef*model.weight_loss_2] # update
-            # print("updated raw weights are:", model.weight_loss_1.item(), model.weight_loss_2.item()) # raw after updating
-            # print("normalized updated weights are:", [w.detach().cpu().numpy() for w in model.weight_params])
+            # print("normalized updated weights are:", [w.item() for w in model.weight_params])
             
             global_step += 1
 
@@ -146,7 +146,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_dir", type=str, required=True)
     parser.add_argument("-L", "--loss_ae", type=str, default="multitask")
     parser.add_argument("-O", "--optimizer", type=str, default="Adam")
-    parser.add_argument("-lr", "--learning_rate", type=float, default=0.01)
+    parser.add_argument("-lr1", "--learning_rate1", type=float, default=1e-3)
+    parser.add_argument("-lr2", "--learning_rate2", type=float, default=1e-3)
     # parser.add_argument('--schedule_lr', action = "store_true")
     parser.add_argument("-N", "--n_epochs", type=int, default=30)
     parser.add_argument("-B", "--batch_size", type=int, default=256)
