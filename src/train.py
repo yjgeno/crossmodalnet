@@ -28,7 +28,7 @@ def train(args):
 
     # optimizer
     if args.optimizer == "Adam":
-        opt_1 = torch.optim.Adam(model.parameters(), lr = args.learning_rate1, weight_decay = 7e-6)
+        opt_1 = torch.optim.Adam(model.parameters(), lr = args.learning_rate1, weight_decay = 6e-5)
         opt_2 = torch.optim.Adam(model.weight_params, lr = args.learning_rate2) # no decay for loss weight
     elif args.optimizer == "SGD":
         opt_1 = torch.optim.SGD(model.parameters(), lr = args.learning_rate1, momentum = 0.9)
@@ -145,9 +145,9 @@ if __name__ == "__main__":
     parser.add_argument("-D", "--data_dir", type=str, required=True)
     parser.add_argument("--log_dir", type=str, required=True)
     parser.add_argument("-L", "--loss_ae", type=str, default="multitask")
-    parser.add_argument("-O", "--optimizer", type=str, default="Adam")
-    parser.add_argument("-lr1", "--learning_rate1", type=float, default=1e-3)
-    parser.add_argument("-lr2", "--learning_rate2", type=float, default=1e-3)
+    parser.add_argument("-O", "--optimizer", type=str, default="SGD")
+    parser.add_argument("-lr1", "--learning_rate1", type=float, default=7.5e-2)
+    parser.add_argument("-lr2", "--learning_rate2", type=float, default=2.4e-3)
     # parser.add_argument('--schedule_lr', action = "store_true")
     parser.add_argument("-N", "--n_epochs", type=int, default=30)
     parser.add_argument("-B", "--batch_size", type=int, default=256)
@@ -155,6 +155,6 @@ if __name__ == "__main__":
     parser.add_argument("--save", action="store_true")
 
     args = parser.parse_args()
-    torch.manual_seed(6869) # TODO
+    torch.manual_seed(6215) # TODO
     train(args)
     # python -m src.train --data_dir toy_data --log_dir logdir -N 100 -v

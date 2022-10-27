@@ -23,6 +23,7 @@ hyperparams = {
                }
 
 def train(config): 
+    torch.manual_seed(config["seed"]) 
     DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "toy_data")
     # load data
     dataset = sc_Dataset(
@@ -31,8 +32,7 @@ def train(config):
             time_key = "day",
             celltype_key = "cell_type",
             )
-    train_set, val_set = load_data(dataset)
-    torch.manual_seed(config["seed"]) 
+    train_set, val_set = load_data(dataset)  
     model = multimodal_AE(n_input = dataset.n_feature_X, 
                           n_output= dataset.n_feature_Y,
                           loss_ae = "multitask",

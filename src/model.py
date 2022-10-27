@@ -78,7 +78,7 @@ class multimodal_AE(torch.nn.Module):
         self._hparams = {
             "latent_dim": 32,
             "autoencoder_width": [512, 128],
-            "alpha": 1.,
+            "alpha": 0.5,
         }  # set default
         if hparams_dict is not None: 
             for key in hparams_dict:
@@ -132,9 +132,8 @@ def save_model(model, name: str = "multitask"):
     raise ValueError("model type '%s' not supported!" % str(type(model)))
 
 
-def load_model(name: str = "multitask", **kwargs): # num_genes, num_drugs, loss_ae
+def load_model(path, **kwargs): # num_genes, num_drugs, loss_ae
     from torch import load
-    import os
     r = multimodal_AE(**kwargs)
-    r.load_state_dict(load(os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{name}.th'), map_location='cpu'))
+    r.load_state_dict(load(path, map_location='cpu'))
     return r
