@@ -35,11 +35,13 @@ class AE(torch.nn.Module):
                  loss_ae: str = "mse",
                  mode: str = "CITE",
                  hparams_dict: dict = None,
+                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                  ):
         super(AE, self).__init__()
         self.loss_ae = loss_ae
         self.loss_type1, self.loss_type2 = ["mse", "L1", "ncorr"], ["nb", "gauss"]
         self.mode = mode
+        self.device = device
 
         # AE loss
         if self.loss_ae == "nb":
@@ -82,6 +84,12 @@ class AE(torch.nn.Module):
         Returns a list of the hyper-parameters.
         """
         return self._hparams
+        
+    def move_inputs_(self, *args):
+        """
+        Move inputs to GPU.
+        """
+        return [x.to(self.device) for x in args]
 
     def forward(self):
         raise NotImplementedError("Implement forward in subclass.")
@@ -109,12 +117,12 @@ class CITE_AE(AE):
         self.encoder = MLP(
             [n_input] + self.hparams["autoencoder_width"] + [self.hparams["latent_dim"]]
         )
-
         self.decoder = MLP(
             [self.hparams["latent_dim"]]
             # + self.hparams["autoencoder_width"]
             + [n_output]  # *2
         )
+        self.to(self.device)
 
     def forward(
         self,
@@ -222,6 +230,8 @@ class MULTIOME_AE(AE):
             + self.hparams["autoencoder_width"]
             + [n_output]
         )
+        self.move_inputs_(*list(self.encoder.chrom_encoders.values())) # send each chrom MLP to GPU
+        self.to(self.device)
 
     def forward(
         self,
