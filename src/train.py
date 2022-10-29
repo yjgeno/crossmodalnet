@@ -26,7 +26,6 @@ def train(args):
     train_set, val_set = load_data(dataset)
 
     # init model
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     if args.mode == "CITE":
         model = CITE_AE(n_input = dataset.n_feature_X, 
                             n_output= dataset.n_feature_Y,
@@ -39,7 +38,6 @@ def train(args):
                               loss_ae = args.loss_ae,
                              )
     print(model)
-    model = model.to(device)
 
     # optimizer
     if args.optimizer == 'Adam':
@@ -61,7 +59,7 @@ def train(args):
         loss_sum, corr_sum_train = 0., 0.
         for sample in train_set:
             X_exp, day, celltype, Y_exp = sample
-            X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+            X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
             optimizer.zero_grad()
             pred_Y_exp = model(X_exp)
             loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
@@ -81,7 +79,7 @@ def train(args):
             corr_sum_val = 0.
             for sample in val_set:
                 X_exp, day, celltype, Y_exp = sample
-                X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+                X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
                 pred_Y_exp = model(X_exp)
                 # loss = loss_fn_ae(pred_Y_exp, Y_exp)
                 # valid_logger.add_scalar('loss', loss.item(), global_step)

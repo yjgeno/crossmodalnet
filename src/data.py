@@ -8,7 +8,9 @@ from .utils import check_training_data, get_chrom_dicts
 
 
 class sc_Dataset(Dataset):
-
+    """
+    Dataset class to load AnnData.
+    """
     def __init__(self, 
                 data_path_X, 
                 data_path_Y,
