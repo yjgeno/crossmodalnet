@@ -4,7 +4,7 @@ import scanpy as sc
 import scipy
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
-from .utils import check_training_data
+from .utils import check_training_data, get_chrom_dicts
 
 
 class sc_Dataset(Dataset):
@@ -23,6 +23,10 @@ class sc_Dataset(Dataset):
         data = sc.read_h5ad(data_path_X)
         data_Y = sc.read_h5ad(data_path_Y)
         check_training_data(data, data_Y)
+        try:
+            self.chrom_len_dict, self.chrom_idx_dict = get_chrom_dicts(data)
+        except Exception:
+            pass
         self.X = (
             torch.Tensor(data.X.A)
             if scipy.sparse.issparse(data.X)
@@ -74,9 +78,9 @@ class sc_Dataset(Dataset):
 
 
 def load_data(dataset: sc_Dataset,
-              split: float = 0.25, # train/val
-              batch_size: int = 128, 
-              shuffle: bool = False, 
+              split: float = 0.15, # train/val
+              batch_size: int = 256, 
+              shuffle: bool = True, 
               **kwargs
               ):
     n_val = int(split * len(dataset))
