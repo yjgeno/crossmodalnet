@@ -6,7 +6,7 @@ from ray.air import session
 from ray.tune.schedulers import ASHAScheduler
 import os
 from .data import sc_Dataset, load_data
-from .model import multimodal_AE
+from .model import CITE_AE
 from .utils import corr_score
 
 
@@ -14,15 +14,14 @@ hyperparams = {
 "lr": tune.qloguniform(1e-4, 1e-1, 5e-5),
 "seed": tune.randint(0, 10000),
 "optimizer": tune.choice(["Adam", "SGD"]),
-"loss_ae": tune.choice(["mse", "ncorr", "gauss", "nb", "custom_"]),
+"loss_ae": tune.choice(["mse", "ncorr", "gauss", "nb",]),
 "weight_decay": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
-"alpha": tune.quniform(0, 1, 0.1),
-"beta": tune.quniform(0, 1, 0.1),
 "hparams_dict": {"latent_dim": tune.choice([64, 32]), 
                  "autoencoder_width": tune.choice([[512, 128], [256]])},
                              }
 
 def train(config): 
+    torch.manual_seed(config["seed"]) 
     DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "toy_data")
     # load data
     dataset = sc_Dataset(
@@ -31,14 +30,13 @@ def train(config):
             time_key = "day",
             celltype_key = "cell_type",
             )
-    train_set, val_set = load_data(dataset)
-    torch.manual_seed(config["seed"]) 
+    train_set, val_set = load_data(dataset)   
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = multimodal_AE(n_input = dataset.n_feature_X, 
-                          n_output= dataset.n_feature_Y,
-                          loss_ae = config["loss_ae"],
-                          hparams_dict = config["hparams_dict"],
-                          )
+    model = CITE_AE(n_input = dataset.n_feature_X, 
+                    n_output= dataset.n_feature_Y,
+                    loss_ae = config["loss_ae"],
+                    hparams_dict = config["hparams_dict"],
+                    )
     model = model.to(device)  
     # optimizer
     if config["optimizer"] == "Adam":
@@ -54,12 +52,7 @@ def train(config):
             X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
             optimizer.zero_grad()
             pred_Y_exp = model(X_exp)
-            if model.loss_ae == "custom_":
-                alpha, beta = config["alpha"], config["beta"] 
-                pred_Y_means = pred_Y_exp[:, :model.n_output]
-                loss = model.loss_fn_mse(pred_Y_means, Y_exp) + alpha*model.loss_fn_ncorr(pred_Y_means, Y_exp) + beta*model.loss_fn_gauss(pred_Y_exp, Y_exp)
-            else:
-                loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
+            loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             loss_sum += loss.item()
             if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
@@ -122,5 +115,5 @@ if __name__ == "__main__":
     print("Best config is:", results.get_best_result().config)
     save_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), f"{args.to_file}.csv")
     results.get_dataframe().to_csv(save_path)
-    # python -m src.tune --test
+    # python -m src.tune_cite --test
 
