@@ -88,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--test", action="store_true", help="quick testing")
     args = parser.parse_args()
     
-    ray.init(num_cpus = 2 if args.test else os.cpu_count()-1)
+    ray.init(num_cpus = 2 if args.test else 4)
     resources_per_trial = {"cpu": 1, "gpu": 0 if args.test else 1}  # set this for GPUs
     tuner = tune.Tuner(
         tune.with_resources(train, resources = resources_per_trial),
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             metric = "corr_val",
             mode = "max",
             scheduler = ASHAScheduler(        
-                max_t = 100, # max iteration
+                max_t = 50, # max iteration
                 grace_period = 10, # stop at least after this iteration
                 reduction_factor = 2
                 ), # for early stopping
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             name="exp",
             stop={
                 "corr_val": 0.98,
-                "training_iteration": 5 if args.test else 100,
+                "training_iteration": 5 if args.test else 50,
             },
         ),
         param_space = hyperparams,

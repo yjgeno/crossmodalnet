@@ -68,8 +68,8 @@ class AE(torch.nn.Module):
             }  # set default
         if self.mode == "MULTIOME":
             self._hparams = {
-                "latent_dim": 128,
-                "autoencoder_width": [512,],
+                "latent_dim": 256,
+                "autoencoder_width": [1024, 512],
             }  # set default
         if hparams_dict is not None:
             for key in hparams_dict:
