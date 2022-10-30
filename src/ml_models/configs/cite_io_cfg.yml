@@ -1,0 +1,4 @@
+input_training_x: Z:/Cailab/yongjian_Dropbox/open-problems-multimodal/train_cite_inputs.h5
+input_training_y: Z:/Cailab/yongjian_Dropbox/open-problems-multimodal/train_cite_targets.h5
+input_test_x: Z:/Cailab/yongjian_Dropbox/open-problems-multimodal/test_cite_inputs.h5
+output_dir: Z:/Cailab/yongjian_Dropbox/open-problems-multimodal/cite_ml_results
