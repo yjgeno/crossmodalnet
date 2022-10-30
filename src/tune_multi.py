@@ -6,7 +6,7 @@ from ray.air import session
 from ray.tune.schedulers import ASHAScheduler
 import os
 from .data import sc_Dataset, load_data
-from .model import multimodal_AE
+from .model import MULTIOME_AE
 from .utils import corr_score
 
 
@@ -14,32 +14,32 @@ hyperparams = {
 "lr": tune.qloguniform(1e-4, 1e-1, 5e-5),
 "seed": tune.randint(0, 10000),
 "optimizer": tune.choice(["Adam", "SGD"]),
-"loss_ae": tune.choice(["mse", "ncorr", "gauss", "nb", "custom_"]),
+"loss_ae": tune.choice(["mse", "ncorr",]),
 "weight_decay": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
 "alpha": tune.quniform(0, 1, 0.1),
 "beta": tune.quniform(0, 1, 0.1),
-"hparams_dict": {"latent_dim": tune.choice([64, 32]), 
-                 "autoencoder_width": tune.choice([[512, 128], [256]])},
+"hparams_dict": {"latent_dim": tune.choice([256, 128]), 
+                 "autoencoder_width": tune.choice([[1024, 512], [512,]])},
                              }
 
 def train(config): 
+    torch.manual_seed(config["seed"]) 
     DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "toy_data")
     # load data
     dataset = sc_Dataset(
-            data_path_X = os.path.join(DIR, "cite_train_x.h5ad"), # HARD coded only for tune
-            data_path_Y = os.path.join(DIR, "cite_train_y.h5ad"),
+            data_path_X = os.path.join(DIR, "multi_train_x.h5ad"), # HARD coded only for tune
+            data_path_Y = os.path.join(DIR, "multi_train_y.h5ad"),
             time_key = "day",
             celltype_key = "cell_type",
             )
-    train_set, val_set = load_data(dataset)
-    torch.manual_seed(config["seed"]) 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = multimodal_AE(n_input = dataset.n_feature_X, 
-                          n_output= dataset.n_feature_Y,
-                          loss_ae = config["loss_ae"],
-                          hparams_dict = config["hparams_dict"],
+    train_set, val_set = load_data(dataset)   
+
+    model = MULTIOME_AE(chrom_len_dict = dataset.chrom_len_dict,
+                        chrom_idx_dict = dataset.chrom_idx_dict,
+                        n_output= dataset.n_feature_Y,
+                        loss_ae = config["loss_ae"],
+                        hparams_dict = config["hparams_dict"],
                           )
-    model = model.to(device)  
     # optimizer
     if config["optimizer"] == "Adam":
         optimizer = torch.optim.Adam(model.parameters(), lr = config["lr"], weight_decay = config["weight_decay"])
@@ -51,18 +51,11 @@ def train(config):
         loss_sum, corr_sum_train = 0., 0.
         for sample in train_set:
             X_exp, day, celltype, Y_exp = sample
-            X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+            X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
             optimizer.zero_grad()
             pred_Y_exp = model(X_exp)
-            if model.loss_ae == "custom_":
-                alpha, beta = config["alpha"], config["beta"] 
-                pred_Y_means = pred_Y_exp[:, :model.n_output]
-                loss = model.loss_fn_mse(pred_Y_means, Y_exp) + alpha*model.loss_fn_ncorr(pred_Y_means, Y_exp) + beta*model.loss_fn_gauss(pred_Y_exp, Y_exp)
-            else:
-                loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
+            loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             loss_sum += loss.item()
-            if model.loss_ae in model.loss_type2:
-                    pred_Y_exp = model.sample_pred_from(pred_Y_exp)
             corr_sum_train += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
             loss.backward()
             optimizer.step()
@@ -73,7 +66,7 @@ def train(config):
             corr_sum_val = 0.
             for sample in val_set:
                 X_exp, day, celltype, Y_exp = sample
-                X_exp, day, celltype, Y_exp =  X_exp.to(device), day.to(device), celltype.to(device), Y_exp.to(device)
+                X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
                 pred_Y_exp = model(X_exp)
                 if model.loss_ae in model.loss_type2:
                     pred_Y_exp = model.sample_pred_from(pred_Y_exp)
@@ -122,5 +115,5 @@ if __name__ == "__main__":
     print("Best config is:", results.get_best_result().config)
     save_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), f"{args.to_file}.csv")
     results.get_dataframe().to_csv(save_path)
-    # python -m src.tune --test
+    # python -m src.tune_multi --test
 
