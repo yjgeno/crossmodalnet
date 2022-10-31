@@ -69,7 +69,7 @@ class AE(torch.nn.Module):
         if self.mode == "MULTIOME":
             self._hparams = {
                 "latent_dim": 256,
-                "autoencoder_width": [1024, 512],
+                "autoencoder_width": [2048, 512],
             }  # set default
         if hparams_dict is not None:
             for key in hparams_dict:
@@ -99,7 +99,6 @@ class CITE_AE(AE):
     """
     An autoencoder model for CITE data.
     """
-
     def __init__(
         self,
         n_input: int,
@@ -119,7 +118,7 @@ class CITE_AE(AE):
         )
         self.decoder = MLP(
             [self.hparams["latent_dim"]]
-            # + self.hparams["autoencoder_width"]
+            # + list(reversed(self.hparams["autoencoder_width"]))
             + [n_output]  # *2
         )
         self.to(self.device)
@@ -227,7 +226,7 @@ class MULTIOME_AE(AE):
         )
         self.decoder = MLP(
             [self.hparams["latent_dim"]]
-            + self.hparams["autoencoder_width"]
+            + list(reversed(self.hparams["autoencoder_width"]))
             + [n_output]
         )
         self.move_inputs_(*list(self.encoder.chrom_encoders.values())) # send each chrom MLP to GPU
@@ -252,7 +251,6 @@ class MULTIOME_AE(AE):
 def save_model(model, name: str = "multimodal"):
     from torch import save
     import os
-
     if isinstance(model, (CITE_AE, MULTIOME_AE)):
         return save(
             model.state_dict(),
@@ -264,7 +262,6 @@ def save_model(model, name: str = "multimodal"):
 def load_model(name: str = "multimodal", **kwargs):  # num_genes, num_drugs, loss_ae
     from torch import load
     import os
-
     try:
         r = CITE_AE(**kwargs)
     except Exception:

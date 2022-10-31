@@ -118,6 +118,8 @@ if __name__ == "__main__":
     parser.add_argument("--save", action="store_true")
 
     args = parser.parse_args()
+    print(args)
     torch.manual_seed(6869) # TODO
     train(args)
-    # python -m src.train --data_dir toy_data --log_dir logdir -N 100 -v
+    # python -m src.train --data_dir toy_data --log_dir log_cite -N 30 -v
+    # python -m src.train --data_dir toy_data --log_dir log_multi -M MULTIOME -L ncorr -N 30 -v
