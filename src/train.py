@@ -23,7 +23,7 @@ def train(args):
             time_key = "day",
             celltype_key = "cell_type",
             )
-    train_set, val_set = load_data(dataset)
+    train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 
     # init model
     if args.mode == "CITE":
@@ -36,6 +36,7 @@ def train(args):
                               chrom_idx_dict = dataset.chrom_idx_dict,
                               n_output= dataset.n_feature_Y,
                               loss_ae = args.loss_ae,
+                              att = args.att,
                              )
     print(model)
 
@@ -113,7 +114,8 @@ if __name__ == "__main__":
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
     parser.add_argument('--schedule_lr', action = "store_true")
     parser.add_argument("-N", "--n_epochs", type=int, default=30)
-    parser.add_argument("-B", "--batch_size", type=int, default=256)
+    parser.add_argument("-B", "--batch_size", type=int, default=31)
+    parser.add_argument("--att", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")
 

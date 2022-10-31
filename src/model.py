@@ -7,7 +7,6 @@ class MLP(torch.nn.Module):
     """
     A multilayer perceptron class.
     """
-
     def __init__(self, sizes, batch_norm=True):
         super(MLP, self).__init__()
         layers = []
@@ -30,7 +29,6 @@ class AE(torch.nn.Module):
     """
     An autoencoder class.
     """
-
     def __init__(self,        
                  loss_ae: str = "mse",
                  mode: str = "CITE",
@@ -68,8 +66,8 @@ class AE(torch.nn.Module):
             }  # set default
         if self.mode == "MULTIOME":
             self._hparams = {
-                "latent_dim": 256,
-                "autoencoder_width": [2048, 512],
+                "latent_dim": 128,
+                "autoencoder_width": [1024, 512],
             }  # set default
         if hparams_dict is not None:
             for key in hparams_dict:
@@ -176,7 +174,7 @@ class MULTIOME_ENCODER(torch.nn.Module):
     An encoder class for ATAC.
     """
 
-    def __init__(self, chrom_len_dict, chrom_idx_dict, sizes):
+    def __init__(self, chrom_len_dict, chrom_idx_dict, sizes, att: bool = False):
         super(MULTIOME_ENCODER, self).__init__()
         self.chrom_len_dict = chrom_len_dict
         self.chrom_idx_dict = chrom_idx_dict
@@ -187,6 +185,12 @@ class MULTIOME_ENCODER(torch.nn.Module):
                 [chrom_len_dict[chrom]] + sizes[1:] + [sizes[0]]  # latent
             )
         self.joint_encoder = MLP([sizes[0] * self.n_chrom] + sizes[1:] + [sizes[0]])
+        self.attention = att
+        if self.attention:
+            encoder_layer = torch.nn.TransformerEncoderLayer(d_model = sizes[0], 
+                                                             nhead = 4, 
+                                                             batch_first = False)
+            self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers = 2)
 
     def forward(self, x):
         x_breaks = [
@@ -195,8 +199,12 @@ class MULTIOME_ENCODER(torch.nn.Module):
             )
             for chrom in self.chrom_idx_dict.keys()
         ]
-        # print([i.shape for i in x_breaks]) # Batch * latent_dim * chrom
-        x_cat = torch.cat([*x_breaks], dim=1)  # concat all to joint encoder
+        # print([i.shape for i in x_breaks]) # Batch * latent_dim, len = chrom
+        if self.attention:
+            x_breaks = torch.stack(x_breaks)#.permute(1, 0, 2) # chrom (n_seq) * Batch * latent_dim (d_model)
+            x_breaks = self.transformer_encoder(x_breaks)
+        x_cat = torch.cat([*x_breaks], dim=1)  # concat all to joint encoder: Batch * (latent_dim*chrom)
+        # print("x_cat", x_cat.shape)
         return self.joint_encoder(x_cat)
 
 
@@ -211,6 +219,7 @@ class MULTIOME_AE(AE):
         n_output: int,
         loss_ae: str = "mse",
         hparams_dict: dict = None,
+        **kwargs
     ):
         super(MULTIOME_AE, self).__init__(loss_ae, "MULTIOME", hparams_dict)
         self.n_output = n_output  # dim
@@ -223,6 +232,7 @@ class MULTIOME_AE(AE):
             chrom_len_dict,
             chrom_idx_dict,
             sizes=[self.hparams["latent_dim"]] + self.hparams["autoencoder_width"],
+            **kwargs
         )
         self.decoder = MLP(
             [self.hparams["latent_dim"]]
