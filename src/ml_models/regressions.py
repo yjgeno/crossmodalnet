@@ -8,6 +8,7 @@ from sklearn.linear_model import LinearRegression, SGDRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.neighbors import KNeighborsRegressor, RadiusNeighborsRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectKBest, SelectFromModel, f_regression, r_regression
@@ -20,7 +21,16 @@ from sklearn.multioutput import MultiOutputRegressor
 FTR_SELS = {"skb": SelectKBest, "sfm": SelectFromModel}
 FTR_ESTIMATORS = {"f": f_regression, "r": r_regression}
 
-REGRESSORS = {"knr": KNeighborsRegressor}
+REGRESSORS = {"knr": KNeighborsRegressor,
+              "rfr": RandomForestRegressor,
+              "svr": SVR,
+              "dtr": DecisionTreeRegressor,
+              "rnr": RadiusNeighborsRegressor,
+              "sgd": SGDRegressor,
+              "gbr": GradientBoostingRegressor,
+              "lr": LinearRegression}
+
+# xgboost? voting?
 
 
 class Regressor:
@@ -41,6 +51,11 @@ class Regressor:
                          n_iter=10,
                          n_jobs=1,
                          verbose=1):
+        print("Start training model")
+        print(f"scoring method: {scoring}")
+        print(f"cv: {cv}")
+        print(f"n_iter: {n_iter}")
+
         self.cv = RandomizedSearchCV(self.multi_output,
                                      param_distributions=param_dist,
                                      cv=cv,
@@ -49,6 +64,9 @@ class Regressor:
                                      n_iter=n_iter,
                                      verbose=verbose)
         self.cv.fit(X, y)
+        print("Training finished.")
+        print("Best score:", self.cv.best_score_)
+        print("Best params:", self.cv.best_params_)
 
     def predict(self, X_test):
         return self.cv.predict(X_test)
