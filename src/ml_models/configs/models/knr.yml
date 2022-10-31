@@ -9,7 +9,7 @@ regr__n_neighbors:
   type: i
   lo: 3
   hi: 11
-regr__n_neighbors:
+regr__weights:
   type: c
   choices:
     - uniform
