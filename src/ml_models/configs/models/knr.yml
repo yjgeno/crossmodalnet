@@ -1,7 +1,7 @@
 model: knr
 fs_name: skb
 fs_estimator: f
-ftr__skb__k:
+ftr__k:
   type: i
   lo: 5000
   hi: 20000

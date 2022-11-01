@@ -3,8 +3,8 @@ from pathlib import Path
 import scanpy as sc
 import pandas as pd
 
-from .regressions import *
-from .utils import *
+from regressions import *
+from utils import *
 
 
 def train(io_config,
@@ -13,7 +13,11 @@ def train(io_config,
           n_split):
 
     cv_clfs = []
-    for s in n_split:
+    assert Path(io_config["input_training_x"]).is_file()
+    assert Path(io_config["input_training_y"]).is_file()
+    assert Path(io_config["input_test_x"]).is_file()
+
+    for s in range(n_split):
         # data loading
         train_X = sc.read_h5ad(io_config["input_training_x"]).X
         n_cells, n_ftrs = train_X.shape
@@ -22,8 +26,10 @@ def train(io_config,
         train_X = train_X[sample_idx, :].toarray()
         train_y = sc.read_h5ad(io_config["input_training_y"]).X[sample_idx, :].toarray()
 
-        output_dir = io_config["output_dir"]
+        output_dir = Path(io_config["output_dir"])
         output_dir = Path(output_dir / f"{model_config['model_name']}_{model_config['fs_name']}_{model_config['fs_est']}")
+        if not output_dir.is_dir():
+            output_dir.mkdir(parents=True, exist_ok=True)
 
         # init
         cv_object = Regressor(reg_name=model_config["model_name"],
@@ -59,7 +65,7 @@ if __name__ == "__main__":
     model_cfd = cfd / "models"
 
     parser.add_argument("-m", "--model", help="model config file name or location")
-    parser.add_argument("-i", "--io", help="IO config file name or location", default="cite_io_cfg")
+    parser.add_argument("-i", "--io", help="IO config file name or location", default="test_io_cfg")
     parser.add_argument("-c", "--cv", help="cv config file name or location", default="cv_cfg")
     parser.add_argument("-n", "--num", help="Number of bootstrap samplings", default=5, type=int)
 

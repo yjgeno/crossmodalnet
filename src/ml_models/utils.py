@@ -17,5 +17,6 @@ def parse_config(config) -> dict:
     for k, v in config.items():
         if v["type"] == "c":
             params[f"estimator__{k}"] = v["choices"]
-        params[f"estimator__{k}"] = dist[v["type"]](v["lo"], v["hi"])
+        else:
+            params[f"estimator__{k}"] = dist[v["type"]](v["lo"], v["hi"])
     return params
