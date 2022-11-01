@@ -88,4 +88,5 @@ def load_data(dataset: sc_Dataset,
     n_val = int(split * len(dataset))
     torch.manual_seed(0)
     train_set, val_set = torch.utils.data.random_split(dataset, [len(dataset)-n_val, n_val])
+    print(f"split data: Train/Val = {1-split}/{split}")
     return DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, **kwargs), DataLoader(val_set, batch_size=batch_size, shuffle=shuffle, **kwargs)
