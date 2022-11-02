@@ -1,0 +1,7 @@
+model: gbr
+fs_name: skb
+fs_estimator: f
+ftr__k:
+  type: i
+  lo: 5000
+  hi: 20000

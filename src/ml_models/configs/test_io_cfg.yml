@@ -1,4 +1,7 @@
 input_training_x: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/toy_x_train.h5ad
 input_training_y: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/toy_y_train.h5ad
+input_preprocessor_x: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/cite_preprocessor_x.pkl
+input_pps_training_x: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/train_cite_inputs_preprocessed.npy
+input_pps_test_x: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/test_cite_inputs_preprocessed.npy
 input_test_x: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/toy_x_test.h5ad
 output_dir: /mnt/c/Users/qwert/PycharmProjects/Multimodal_22/data/test_ml_results

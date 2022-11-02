@@ -3,8 +3,8 @@ fs_name: skb
 fs_estimator: f
 ftr__k:
   type: i
-  lo: 5000
-  hi: 20000
+  lo: 32
+  hi: 100
 regr__n_neighbors:
   type: i
   lo: 3
