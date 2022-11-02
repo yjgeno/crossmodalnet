@@ -7,7 +7,7 @@ class MLP(torch.nn.Module):
     """
     A multilayer perceptron class.
     """
-    def __init__(self, sizes, batch_norm=True):
+    def __init__(self, sizes, batch_norm=True, dropout=0.1):
         super(MLP, self).__init__()
         layers = []
         for s in range(len(sizes) - 1):
@@ -17,8 +17,9 @@ class MLP(torch.nn.Module):
                 if batch_norm and s < len(sizes) - 2
                 else None,
                 torch.nn.ReLU(),
+                torch.nn.Dropout(p = dropout)
             ]
-        layers = [l for l in layers if l is not None][:-1]
+        layers = [l for l in layers if l is not None][:-2] # last layer
         self.network = torch.nn.Sequential(*layers)
 
     def forward(self, x):
