@@ -4,7 +4,7 @@ import scanpy as sc
 import scipy
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
-from .utils import check_training_data, get_chrom_dicts
+from .utils import check_training_data, get_chrom_dicts, preprocessing_
 
 
 class sc_Dataset(Dataset):
@@ -16,26 +16,26 @@ class sc_Dataset(Dataset):
                 data_path_Y,
                 time_key: str = "day",
                 celltype_key: str = "cell_type",
+                preprocessing_key: str = None,
+                **kwargs
                 ):
         """
-
         Args:
             data_path: Path to .h5ad file.
         """
         data = sc.read_h5ad(data_path_X)
+        counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
+        if preprocessing_key is not None:
+            counts = preprocessing_(counts, key = preprocessing_key, **kwargs)
         data_Y = sc.read_h5ad(data_path_Y)
         check_training_data(data, data_Y)
         try:
             self.chrom_len_dict, self.chrom_idx_dict = get_chrom_dicts(data)
         except Exception:
             pass
-        self.X = (
-            torch.Tensor(data.X.A)
-            if scipy.sparse.issparse(data.X)
-            else torch.Tensor(data.X)
-        )
+        self.X = torch.Tensor(counts)
         self.var_names = data.var_names.to_numpy() # X feature names
-        self.n_feature_X = len(self.var_names)
+        self.n_feature_X = counts.shape[1] # X feature no.
         self.day = data.obs[time_key].to_numpy()
         self.unique_day = np.unique(data.obs[time_key].values)
         self.celltype = data.obs[celltype_key].to_numpy()

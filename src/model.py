@@ -258,6 +258,31 @@ class MULTIOME_AE(AE):
         return reconstructions
 
 
+class MULTIOME_DECODER(AE):
+    """
+    A MLP class for processed low-dimensional ATAC.
+    """
+    def __init__(
+        self,
+        n_input: int,
+        n_output: int,
+        loss_ae: str = "mse",
+        hparams_dict: dict = None,
+    ):
+        super(MULTIOME_DECODER, self).__init__(loss_ae, "MULTIOME", hparams_dict)
+        self.n_input = n_input
+        self.n_output = n_output  
+        self.decoder = MLP(
+            [n_input]
+            + list(reversed(self.hparams["autoencoder_width"]))
+            + [n_output] 
+        )
+        self.to(self.device)
+
+    def forward(self, X):
+        return self.decoder(X)
+
+
 def save_model(model, name: str = "multimodal"):
     from torch import save
     import os
