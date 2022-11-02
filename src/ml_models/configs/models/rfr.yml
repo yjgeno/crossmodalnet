@@ -1,7 +1,7 @@
 model: rfr
 fs_name: skb
 fs_estimator: f
-ftr__skb__k:
+ftr__k:
   type: i
   lo: 5000
   hi: 20000
@@ -17,7 +17,7 @@ regr__criterion:
     - poisson
 regr__max_depth:
   type: i
-  lo: 5
+  lo: 1
   hi: 50
 regr__min_samples_split:
   type: i
