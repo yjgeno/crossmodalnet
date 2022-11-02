@@ -2,7 +2,7 @@ import torch
 import os
 import torch.utils.tensorboard as tb
 from .data import sc_Dataset, load_data
-from .model import CITE_AE, MULTIOME_AE, save_model, load_model
+from .model import CITE_AE, MULTIOME_AE, MULTIOME_DECODER, save_model
 from .utils import corr_score
 
 
@@ -22,22 +22,30 @@ def train(args):
             data_path_Y = data_path_Y,
             time_key = "day",
             celltype_key = "cell_type",
+            preprocessing_key = args.preprocess,
             )
     train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 
     # init model
     if args.mode == "CITE":
         model = CITE_AE(n_input = dataset.n_feature_X, 
-                            n_output= dataset.n_feature_Y,
-                            loss_ae = args.loss_ae,
-                            )
+                        n_output= dataset.n_feature_Y,
+                        loss_ae = args.loss_ae,
+                        )
     if args.mode == "MULTIOME":
-        model = MULTIOME_AE(chrom_len_dict = dataset.chrom_len_dict, 
-                              chrom_idx_dict = dataset.chrom_idx_dict,
-                              n_output= dataset.n_feature_Y,
-                              loss_ae = args.loss_ae,
-                              att = args.att,
-                             )
+        if args.preprocess in ["PCA", "tSVD"]:
+            model = MULTIOME_DECODER(n_input = dataset.n_feature_X, 
+                                     n_output= dataset.n_feature_Y,
+                                     loss_ae = args.loss_ae,
+                                     hparams_dict={"autoencoder_width": [2048, 512]},
+                                    )
+        else:
+            model = MULTIOME_AE(chrom_len_dict = dataset.chrom_len_dict, 
+                                chrom_idx_dict = dataset.chrom_idx_dict,
+                                n_output= dataset.n_feature_Y,
+                                loss_ae = args.loss_ae,
+                                att = args.att,
+                                )
     print(model)
 
     # optimizer
@@ -106,15 +114,16 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-D", "--data_dir", type=str, required=True)
+    parser.add_argument("-d", "--data_dir", type=str, required=True)
     parser.add_argument("--log_dir", type=str, required=True)
-    parser.add_argument("-M", "--mode", type=str, default="CITE")
-    parser.add_argument("-L", "--loss_ae", type=str, default="mse")
-    parser.add_argument("-O", "--optimizer", type=str, default="Adam")
+    parser.add_argument("-m", "--mode", type=str, default="CITE")
+    parser.add_argument("-p", "--preprocess", type=str, default=None)
+    parser.add_argument("-l", "--loss_ae", type=str, default="mse")
+    parser.add_argument("-o", "--optimizer", type=str, default="Adam")
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
     parser.add_argument('--schedule_lr', action = "store_true")
-    parser.add_argument("-N", "--n_epochs", type=int, default=30)
-    parser.add_argument("-B", "--batch_size", type=int, default=31)
+    parser.add_argument("-n", "--n_epochs", type=int, default=30)
+    parser.add_argument("-b", "--batch_size", type=int, default=256)
     parser.add_argument("--att", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")
@@ -123,5 +132,5 @@ if __name__ == "__main__":
     print(args)
     torch.manual_seed(6869) # TODO
     train(args)
-    # python -m src.train --data_dir toy_data --log_dir log_cite -N 30 -v
-    # python -m src.train --data_dir toy_data --log_dir log_multi -M MULTIOME -L ncorr -N 30 -v
+    # python -m src.train --data_dir toy_data --log_dir log_cite -n 30 -v
+    # python -m src.train --data_dir toy_data --log_dir log_multi -m MULTIOME -l ncorr -n 30 -v

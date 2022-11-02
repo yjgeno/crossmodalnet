@@ -3,7 +3,7 @@ import torch
 from anndata import AnnData 
 
 
-def get_chrom_dicts(ada):
+def get_chrom_dicts(ada: AnnData):
     """
     Get two dictionaries for each chromosome's feature len and feature start/end index.
     """
@@ -14,6 +14,32 @@ def get_chrom_dicts(ada):
     for chrom in chrom_len_dict.keys(): # same key order
         chrom_idx_dict[chrom] = (df_meta.groupby("chr").groups[chrom]).to_numpy()[[0,-1]].tolist()
     return chrom_len_dict, chrom_idx_dict
+
+
+def preprocessing_(counts, key: str = None, **kwargs):
+    """
+    Args:
+        counts (dense array): cell * feature.
+    """
+    from sklearn.preprocessing import StandardScaler
+    from sklearn import decomposition
+    scaler = StandardScaler()
+    if key == "binary":
+        counts[counts != 0] = 1.
+    if key == "standard_0":       
+        counts = scaler.fit_transform(counts) # default on features
+    if key == "standard_1":
+        counts = scaler.fit_transform(counts.T).T # on sample
+    if key == "PCA":
+        counts = scaler.fit_transform(counts) # on features
+        pca = decomposition.PCA(n_components = 128, svd_solver="full", **kwargs)
+        counts = pca.fit_transform(counts)
+    if key == "tSVD": # TruncatedSVD on TF/IDF data
+        svd = decomposition.TruncatedSVD(n_components = 64, n_iter=7, random_state=42, **kwargs)
+        counts = svd.fit_transform(counts)
+    print(f"Complete preprocessing by {key}")
+
+    return counts
 
 
 def check_training_data(ada_X: AnnData, ada_Y: AnnData):
