@@ -9,7 +9,7 @@ def get_chrom_dicts(ada: AnnData):
     """
     df_meta = ada.var["gene_id"].str.split(':', expand=True).rename(columns={0:"chr", 1:'region'})
     df_meta.reset_index(inplace=True)
-    chrom_len_dict = (df_meta["chr"].value_counts()[:23]).to_dict() # chr1-chr22, chrX, w/o chrY
+    chrom_len_dict = (df_meta["chr"].value_counts()[:23]).drop(labels="chrX").to_dict() # chr1-chr22, w/o chrX, chrY
     chrom_idx_dict = {}
     for chrom in chrom_len_dict.keys(): # same key order
         chrom_idx_dict[chrom] = (df_meta.groupby("chr").groups[chrom]).to_numpy()[[0,-1]].tolist()
@@ -22,8 +22,12 @@ def preprocessing_(counts, key: str = None, **kwargs):
         counts (dense array): cell * feature.
     """
     from sklearn.preprocessing import StandardScaler
-    from sklearn import decomposition
+    from sklearn import decomposition  
+    # min_cells = 5
+    # counts = counts[:, np.asarray(np.sum(counts>0, axis=0) > min_cells).ravel()]
+    # print(f"Features more than {min_cells} cells to use: {counts.shape[1]}")
     scaler = StandardScaler()
+
     if key == "binary":
         counts[counts != 0] = 1.
     if key == "standard_0":       
@@ -32,10 +36,10 @@ def preprocessing_(counts, key: str = None, **kwargs):
         counts = scaler.fit_transform(counts.T).T # on sample
     if key == "PCA":
         counts = scaler.fit_transform(counts) # on features
-        pca = decomposition.PCA(n_components = 128, svd_solver="full", **kwargs)
+        pca = decomposition.PCA(n_components = 50, svd_solver="full", **kwargs)
         counts = pca.fit_transform(counts)
     if key == "tSVD": # TruncatedSVD on TF/IDF data
-        svd = decomposition.TruncatedSVD(n_components = 64, n_iter=7, random_state=42, **kwargs)
+        svd = decomposition.TruncatedSVD(n_components = 50, n_iter=7, random_state=42, **kwargs)
         counts = svd.fit_transform(counts)
     print(f"Complete preprocessing by {key}")
 
