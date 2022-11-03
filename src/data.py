@@ -24,9 +24,10 @@ class sc_Dataset(Dataset):
             data_path: Path to .h5ad file.
         """
         data = sc.read_h5ad(data_path_X)
+        sc.pp.filter_genes(data, min_cells = 5) # filter feature
+        print(f"Features to use: {data.shape[1]}")
         counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
-        if preprocessing_key is not None:
-            counts = preprocessing_(counts, key = preprocessing_key, **kwargs)
+        counts = preprocessing_(counts, key = preprocessing_key, **kwargs)
         data_Y = sc.read_h5ad(data_path_Y)
         check_training_data(data, data_Y)
         try:

@@ -7,7 +7,7 @@ class MLP(torch.nn.Module):
     """
     A multilayer perceptron class.
     """
-    def __init__(self, sizes, batch_norm=True):
+    def __init__(self, sizes, batch_norm=True, dropout=0.1):
         super(MLP, self).__init__()
         layers = []
         for s in range(len(sizes) - 1):
@@ -17,8 +17,9 @@ class MLP(torch.nn.Module):
                 if batch_norm and s < len(sizes) - 2
                 else None,
                 torch.nn.ReLU(),
+                torch.nn.Dropout(p = dropout)
             ]
-        layers = [l for l in layers if l is not None][:-1]
+        layers = [l for l in layers if l is not None][:-2] # last layer
         self.network = torch.nn.Sequential(*layers)
 
     def forward(self, x):
@@ -40,6 +41,7 @@ class AE(torch.nn.Module):
         self.loss_type1, self.loss_type2 = ["mse", "L1", "ncorr"], ["nb", "gauss"]
         self.mode = mode
         self.device = device
+        self.relu = torch.nn.ReLU()
 
         # AE loss
         if self.loss_ae == "nb":
@@ -189,8 +191,9 @@ class MULTIOME_ENCODER(torch.nn.Module):
         if self.attention:
             encoder_layer = torch.nn.TransformerEncoderLayer(d_model = sizes[0], 
                                                              nhead = 4, 
+                                                             dim_feedforward = 512,
                                                              batch_first = False)
-            self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers = 2)
+            self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers = 6)
 
     def forward(self, x):
         x_breaks = [
@@ -246,12 +249,15 @@ class MULTIOME_AE(AE):
         self,
         X,
         return_latent: bool = False,
+        relu_last: bool = True,
     ):
         """
         Predict Y given X.
         """
         latent_basal = self.encoder(X)
         reconstructions = self.decoder(latent_basal)
+        if relu_last:
+            reconstructions = self.relu(reconstructions)
 
         if return_latent:
             return reconstructions, latent_basal
@@ -279,7 +285,9 @@ class MULTIOME_DECODER(AE):
         )
         self.to(self.device)
 
-    def forward(self, X):
+    def forward(self, X, relu_last: bool = True):
+        if relu_last:
+            return self.relu(self.decoder(X))
         return self.decoder(X)
 
 
