@@ -1,7 +1,7 @@
-input_training_x: /scratch/user/yjyang027/open-problems-multimodal/train_cite_inputs.h5
+input_training_x: /scratch/user/yjyang027/open-problems-multimodal/cite_train_x.h5ad
+input_training_y: /scratch/user/yjyang027/open-problems-multimodal/cite_train_y.h5ad
+input_test_x: /scratch/user/yjyang027/open-problems-multimodal/cite_test_x.h5ad
 input_preprocessor_x: /scratch/user/yjyang027/open-problems-multimodal/cite_preprocessor_x.pkl
-input_pps_training_x: /scratch/user/yjyang027/open-problems-multimodal/train_cite_inputs_preprocessed.npy
-input_training_y: /scratch/user/yjyang027/open-problems-multimodal/train_cite_targets.h5
-input_test_x: /scratch/user/yjyang027/open-problems-multimodal/test_cite_inputs.h5
-input_pps_test_x: /scratch/user/yjyang027/open-problems-multimodal/test_cite_inputs_preprocessed.npy
+input_pps_training_x: /scratch/user/yjyang027/open-problems-multimodal/cite_train_x_preprocessed.npy
+input_pps_test_x: /scratch/user/yjyang027/open-problems-multimodal/cite_test_x_preprocessed.npy
 output_dir: /scratch/user/yjyang027/open-problems-multimodal/cite_ml_results
