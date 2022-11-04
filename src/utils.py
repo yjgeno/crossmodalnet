@@ -41,6 +41,11 @@ def preprocessing_(counts, key: str = None, **kwargs):
     if key == "tSVD": # TruncatedSVD on TF/IDF data
         svd = decomposition.TruncatedSVD(n_components = 50, n_iter=7, random_state=42, **kwargs)
         counts = svd.fit_transform(counts)
+    if key == "magic":
+        # pip install --user magic-impute 
+        import magic
+        magic_op = magic.MAGIC(knn=7)
+        counts = magic_op.fit_transform(counts)
     print(f"Complete preprocessing by {key}")
 
     return counts
