@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from .loss import NBLoss, GaussNLLLoss, NCorrLoss
+from .activation import MultiheadAttention, AttentionEncoderBlock
 
 
 class MLP(torch.nn.Module):
@@ -16,7 +17,7 @@ class MLP(torch.nn.Module):
                 torch.nn.BatchNorm1d(sizes[s + 1])
                 if batch_norm and s < len(sizes) - 2
                 else None,
-                torch.nn.ReLU(),
+                torch.nn.SELU(), # TODO
                 torch.nn.Dropout(p = dropout)
             ]
         layers = [l for l in layers if l is not None][:-2] # last layer
@@ -294,7 +295,7 @@ class MULTIOME_DECODER(AE):
 def save_model(model, name: str = "multimodal"):
     from torch import save
     import os
-    if isinstance(model, (CITE_AE, MULTIOME_AE)):
+    if isinstance(model, (CITE_AE, MULTIOME_AE, MULTIOME_DECODER)):
         return save(
             model.state_dict(),
             os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{name}.th"),
