@@ -11,6 +11,7 @@ from utils import *
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import TruncatedSVD
 from sklearn.pipeline import Pipeline
+import warnings
 
 
 def preprocess(train_X,
@@ -61,7 +62,8 @@ def check_processed(train_X_raw,
 def train(io_config,
           model_config,
           cv_config,
-          n_split):
+          n_split,
+          use_gpu):
 
     cv_clfs = []
     assert Path(io_config["input_training_x"]).is_file()
@@ -86,19 +88,23 @@ def train(io_config,
         train_y = sc.read_h5ad(io_config["input_training_y"]).X[sample_idx, :].toarray()
 
         output_dir = Path(io_config["output_dir"])
-        output_dir = Path(output_dir / f"{model_config['model_name']}_{model_config['fs_name']}_{model_config['fs_est']}")
+        output_dir = Path(output_dir / f"{model_config['model_name']}")
         if not output_dir.is_dir():
             output_dir.mkdir(parents=True, exist_ok=True)
 
         # init
         cv_object = Regressor(reg_name=model_config["model_name"],
-                              fs_name=model_config["fs_name"],
-                              fs_est=model_config["fs_est"])
+                              use_cuml=use_gpu)
 
         # training
         cv_object.cross_validation(train_X, train_y, param_dist=model_config["param"], **cv_config)
         cv_object.save_iters(output_dir / f"cv_result_{s}.csv")
-        cv_object.save_model(output_dir / f"best_model_{s}.joblib")
+
+        if use_gpu:
+            (output_dir / f"models").mkdir(parents=True, exist_ok=True)
+            cv_object.save_model(output_dir / f"models")
+        else:
+            cv_object.save_model(output_dir / f"best_model_{s}.joblib")
         cv_clfs.append(cv_object)
         del train_X
         del train_y
@@ -128,27 +134,30 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--io", help="IO config file name or location", default="test_io_cfg")
     parser.add_argument("-c", "--cv", help="cv config file name or location", default="cv_cfg")
     parser.add_argument("-n", "--num", help="Number of bootstrap samplings", default=5, type=int)
+    parser.add_argument("-g", "--gpu", help="Use GPU", action='store_true')
 
     args = parser.parse_args()
     assert args.problem in ["cite", "multi"]
     model_cfd = cfd / f"models_for_{args.problem}"
 
-    print("Config dir located: ", model_cfd.is_dir())
+    warnings.filterwarnings(action='ignore', category=FutureWarning)
 
-    model_configs = load_config((model_cfd / args.model).with_suffix(".yml")) \
-        if (model_cfd / args.model).with_suffix(".yml").is_file() else load_config(args.model)
+    print("Config dir located: ", model_cfd.is_dir())
+    cfg_name = args.model + ("_g" if args.gpu else "")
+
+    model_configs = load_config((model_cfd / cfg_name).with_suffix(".yml")) \
+        if (model_cfd / cfg_name).with_suffix(".yml").is_file() else load_config(cfg_name)
     io_configs = load_config((cfd / args.io).with_suffix(".yml")) \
         if (cfd / args.io).with_suffix(".yml").is_file() else load_config(args.io)
     cv_configs = load_config((cfd / args.cv).with_suffix(".yml")) \
         if (cfd / args.cv).with_suffix(".yml").is_file() else load_config(args.cv)
 
     model_name = model_configs.pop("model")
-    fs_name = model_configs.pop("fs_name")
-    fs_est = model_configs.pop("fs_estimator")
+    #fs_name = model_configs.pop("fs_name")
+    #fs_est = model_configs.pop("fs_estimator")
     train(io_config=io_configs,
           model_config={"model_name": model_name,
-                        "fs_name": fs_name,
-                        "fs_est": fs_est,
-                        "param": parse_config(model_configs)},
+                        "param": parse_config(model_configs, use_gpu=args.gpu)},
           cv_config=cv_configs,
-          n_split=args.num)
+          n_split=args.num,
+          use_gpu=args.gpu)

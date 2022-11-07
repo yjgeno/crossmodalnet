@@ -1,0 +1,9 @@
+python3 -m src.ml_models.train -m knr -p cite -n 1 -i cite_io_cfg -g
+python3 -m src.ml_models.train -m rfr -p cite -n 1 -i cite_io_cfg -g
+python3 -m src.ml_models.train -m ridge -p cite -n 1 -i cite_io_cfg -g
+python3 -m src.ml_models.train -m svr -p cite -n 1 -i cite_io_cfg -g
+
+python3 -m src.ml_models.train -m knr -p multi -n 1 -i multi_io_cfg -g
+python3 -m src.ml_models.train -m rfr -p multi -n 1 -i multi_io_cfg -g
+python3 -m src.ml_models.train -m ridge -p multi -n 1 -i multi_io_cfg -g
+python3 -m src.ml_models.train -m svr -p multi -n 1 -i multi_io_cfg -g

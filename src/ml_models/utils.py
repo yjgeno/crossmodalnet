@@ -11,12 +11,13 @@ def load_config(config_path):
     return config
 
 
-def parse_config(config) -> dict:
+def parse_config(config, use_gpu) -> dict:
     dist = {"i": randint, "l": loguniform, "f": uniform}
     params = {}
+    print(config)
     for k, v in config.items():
         if v["type"] == "c":
-            params[f"estimator__{k}"] = v["choices"]
+            params[f"{k}" if use_gpu else f"estimator__{k}"] = v["choices"]
         else:
-            params[f"estimator__{k}"] = dist[v["type"]](v["lo"], v["hi"])
+            params[f"{k}" if use_gpu else f"estimator__{k}"] = dist[v["type"]](v["lo"], v["hi"])
     return params
