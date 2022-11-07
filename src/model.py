@@ -1,7 +1,9 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from .loss import NBLoss, GaussNLLLoss, NCorrLoss
 from .activation import MultiheadAttention, AttentionEncoderBlock
+from .transformer import TransformerLayer
 
 
 class MLP(torch.nn.Module):
@@ -290,6 +292,67 @@ class MULTIOME_DECODER(AE):
         if relu_last:
             return self.relu(self.decoder(X))
         return self.decoder(X)
+
+
+class Transformer_multi(AE):
+    def __init__(self, 
+                num_positions: int = 228942,
+                d_model = 64, 
+                d_internal = 64, 
+                dim_ffn = 128,
+                n_output = 23418, 
+                dropout = 0.,
+                loss_ae: str = "mse",
+                **kwargs
+                ):
+        """
+        :param vocab_size: vocabulary size of the embedding layer
+        :param num_positions: max sequence length that will be fed to the model; should be 20
+        :param d_model: see TransformerLayer
+        :param d_internal: see TransformerLayer
+        :param num_classes: number of classes predicted at the output layer; should be 3
+        :param num_layers: number of TransformerLayers to use; can be whatever you want
+        """
+        super(Transformer_multi, self).__init__(loss_ae, "MULTIOME", hparams_dict=None)
+        self.emb = nn.Embedding(num_positions, d_model)
+        # self.PositionalEncoding = PositionalEncoding(d_model, num_positions)
+        # Attention layer: set embed_dim=input_dim
+        self.self_attn = TransformerLayer(d_model, d_internal)
+        # Two-layer MLP
+        self.linear_net = nn.Sequential(
+            nn.Linear(d_model, dim_ffn),
+            nn.Dropout(dropout),
+            nn.ReLU(inplace=True),
+            nn.Linear(dim_ffn, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+        self.linear_class = nn.Linear(d_model, n_output)
+
+        self.to(self.device)
+
+    def forward(self, X_indices, return_attn = False): # unbatched
+        """
+        X_indices: list of input indices.
+        """     
+        X = self.emb(X_indices) # [seq, d_model]
+        # X_pos = self.PositionalEncoding(X)
+        # X = X + X_pos
+        # Attention
+        attn_out, attn = self.self_attn(X, return_attention = True)
+        X = X + self.dropout(attn_out)
+        X = self.norm1(X)
+        # MLP
+        linear_out = self.linear_net(X)
+        X = X + self.dropout(linear_out)
+        X = self.norm2(X)
+        # map to num_classes and log-softmax
+        out = self.linear_class(X) # [seq, n_output]
+        out = self.relu(out.mean(dim=0)) # [n_output]
+        if return_attn:
+            return out, attn
+        return out
 
 
 def save_model(model, name: str = "multimodal"):

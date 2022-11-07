@@ -96,7 +96,7 @@ class sc_Dataset_index(Dataset):
             data_path: Path to .h5ad file.
         """
         data = sc.read_h5ad(data_path_X)
-        sc.pp.filter_genes(data, min_cells = 5) # filter feature
+        sc.pp.filter_genes(data, min_cells = 0) # filter feature
         print(f"Features to use: {data.shape[1]}")
         counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
         self.X = preprocessing_(counts, key = preprocessing_key, **kwargs)   
@@ -149,8 +149,9 @@ class Collator(object):
         x_indexed_padd = torch.LongTensor([-1]).repeat(len(data)*self.max_len).view(len(data), self.max_len)
         for i in range(len(data)):
             x_indexed_padd[i][:len(data[i][0])] = data[i][0]
+        mask = (x_indexed_padd!=-1)
 
-        return x_indexed_padd.long(), torch.stack(labels)
+        return x_indexed_padd.long(), torch.stack(labels), mask
 
 
 def load_data(dataset: Union[sc_Dataset, sc_Dataset_index],
