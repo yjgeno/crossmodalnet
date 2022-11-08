@@ -3,18 +3,6 @@ import torch.nn.functional as F
 import math
 
 
-def scaled_dot_product(q, k, v):
-    """
-    Attention output w/o mask.
-    """
-    d_k = q.size()[-1]
-    attn_logits = torch.matmul(q, k.transpose(-2, -1))
-    attn_logits = attn_logits / math.sqrt(d_k)
-    attention = F.softmax(attn_logits, dim=-1) # softmax
-    values = torch.matmul(attention, v)
-    return values, attention
-
-
 class MultiheadAttention(torch.nn.Module):
     """
     MultiheadAttention layer as activation function.
@@ -37,6 +25,18 @@ class MultiheadAttention(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.o_proj.weight)
         self.o_proj.bias.data.fill_(0)
 
+    @staticmethod
+    def scaled_dot_product(q, k, v):
+        """
+        Attention output w/o mask.
+        """
+        d_k = q.size()[-1]
+        attn_logits = torch.matmul(q, k.transpose(-2, -1))
+        attn_logits = attn_logits / math.sqrt(d_k)
+        attention = F.softmax(attn_logits, dim=-1) # softmax
+        values = torch.matmul(attention, v)
+        return values, attention
+    
     def forward(self, 
                 X, 
                 return_attention=False):
@@ -49,7 +49,7 @@ class MultiheadAttention(torch.nn.Module):
         q, k, v = qkv.chunk(3, dim=-1)
 
         # Determine values outputs
-        values, attention = scaled_dot_product(q, k, v)
+        values, attention = self.scaled_dot_product(q, k, v)
         values = values.permute(0, 2, 1, 3) # [Batch, seq_Len, head, embed_dim]
         values = values.reshape(batch_size, seq_length, self.embed_dim) # squeeze head
         out = self.o_proj(values)
