@@ -22,7 +22,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from cuml.ensemble import RandomForestRegressor as rfr_cuml
 from cuml.svm import SVR as svr_cuml
 from cuml.neighbors import KNeighborsRegressor as knr_cuml
-from cuml import ridge_cuml
+from cuml import Ridge as ridge_cuml
 
 FTR_SELS = {"skb": SelectKBest, "sfm": SelectFromModel}
 FTR_ESTIMATORS = {"f": f_regression, "r": r_regression}
