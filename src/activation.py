@@ -26,22 +26,26 @@ class MultiheadAttention(torch.nn.Module):
         self.o_proj.bias.data.fill_(0)
 
     @staticmethod
-    def scaled_dot_product(q, k, v):
+    def scaled_dot_product(q, k, v, mask=None):
         """
         Attention output w/o mask.
         """
         d_k = q.size()[-1]
         attn_logits = torch.matmul(q, k.transpose(-2, -1))
         attn_logits = attn_logits / math.sqrt(d_k)
+        if mask is not None:
+            attn_logits = attn_logits.masked_fill(mask == 0, -9e15)
+        # attention = attn_logits # raw
         attention = F.softmax(attn_logits, dim=-1) # softmax
         values = torch.matmul(attention, v)
         return values, attention
     
     def forward(self, 
                 X, 
-                return_attention=False):
+                mask=None,
+                return_attn=False):
         batch_size, seq_length, _ = X.size() # X: [Batch, seq_Len, embed_dim]
-        qkv = self.qkv_proj(X)
+        qkv = self.qkv_proj(X) # self-attn
 
         # Separate Q, K, V from linear output
         qkv = qkv.reshape(batch_size, seq_length, self.n_head, 3*self.head_dim)
@@ -49,12 +53,12 @@ class MultiheadAttention(torch.nn.Module):
         q, k, v = qkv.chunk(3, dim=-1)
 
         # Determine values outputs
-        values, attention = self.scaled_dot_product(q, k, v)
+        values, attention = self.scaled_dot_product(q, k, v, mask=mask)
         values = values.permute(0, 2, 1, 3) # [Batch, seq_Len, head, embed_dim]
         values = values.reshape(batch_size, seq_length, self.embed_dim) # squeeze head
         out = self.o_proj(values)
 
-        if return_attention:
+        if return_attn:
             return out, attention
         else:
             return out
@@ -89,9 +93,9 @@ class AttentionEncoderBlock(torch.nn.Module):
         self.norm2 = torch.nn.LayerNorm(input_dim)
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, X):
+    def forward(self, X, mask=None):
         # Attention
-        attn_out = self.self_attn(X)
+        attn_out = self.self_attn(X, mask=mask)
         X = X + self.dropout(attn_out)
         X = self.norm1(X)
         # MLP
