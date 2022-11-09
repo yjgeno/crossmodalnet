@@ -88,8 +88,7 @@ class Regressor:
                        cv=n_cv,
                        n_jobs=1,
                        scoring=scoring,
-                       n_iter=n_iter,
-                       verbose=verbose)
+                       n_iter=n_iter)
         self.cv.append(cv)
         self.cv[-1].fit(X, y_vec)
         self._best_scores.append(self.cv[-1].best_score_)
