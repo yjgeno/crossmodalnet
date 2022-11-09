@@ -153,7 +153,7 @@ def aggregate_bin(data,
         if data[:, sel_vars.index].X.shape[1] == 0:
             continue
         matrixes.append(getattr(data[:, sel_vars.index].X, agg_method)(axis=1))
-        vars.append(f"chr_name_{s}:{t}")
+        vars.append(f"{chr_name}_{s}:{t}")
 
     return np.concatenate(matrixes, axis=1), pd.DataFrame(vars, index=vars)
 
@@ -175,7 +175,8 @@ def bin_var(data: AnnData,
                                           ch, distance, split, inclusive)
         matrixes.append(matrix)
         vars.append(var_names)
-
-    return AnnData(X=np.concatenate(matrixes, axis=1),
-                   obs=data.obs,
-                   var=pd.concat(vars, axis=0))
+    adata = AnnData(X=np.concatenate(matrixes, axis=1),
+                    obs=data.obs,
+                    var=pd.concat(vars, axis=0))
+    adata.var.rename(columns={0:"gene_id"}, inplace=True)
+    return adata
