@@ -76,14 +76,15 @@ def train(io_config,
                     test_X_pps=Path(io_config["input_pps_test_x"]),
                     pipeline_path=Path(io_config["input_preprocessor_x"]),
                     )
+    ftr_indexes = []
 
     for s in range(n_split):
         # data loading
         with open(io_config["input_pps_training_x"], 'rb') as f:
             train_X = np.load(f)
         n_cells, n_ftrs = train_X.shape
-        sample_idx = np.random.choice(n_cells, n_cells // n_split)
-
+        sample_idx = np.random.choice(n_cells, n_cells // n_split)  if n_split != 1 else np.arange(0, n_cells)
+        ftr_indexes.append(sample_idx)
         train_X = train_X[sample_idx, :]
         train_y = sc.read_h5ad(io_config["input_training_y"]).X[sample_idx, :].toarray()
 
@@ -91,6 +92,9 @@ def train(io_config,
         output_dir = Path(output_dir / f"{model_config['model_name']}")
         if not output_dir.is_dir():
             output_dir.mkdir(parents=True, exist_ok=True)
+
+        with open(output_dir / f"ftr_ind_{s}.npy", 'wb') as f:
+            np.save(f, sample_idx)
 
         # init
         cv_object = Regressor(reg_name=model_config["model_name"],
@@ -114,7 +118,7 @@ def train(io_config,
         test_X = np.load(f)
 
     for i, clf in enumerate(cv_clfs):
-        predicted_y = clf.predict(test_X)
+        predicted_y = clf.predict(test_X[ftr_indexes[i], :])
         pd.DataFrame(data=predicted_y).to_csv(output_dir / f"predicted_y_{i}.csv")
 
     del test_X
