@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from tqdm import tqdm
 import torch
 from anndata import AnnData 
 
@@ -123,3 +125,57 @@ class Indexer(object):
             self.ints_to_objs[new_idx] = object
         return self.objs_to_ints[object]
 
+
+def aggregate_bin(data,
+                  var,
+                  chr_name,
+                  distance=10000,
+                  split=None,
+                  inclusive="both",
+                  agg_method="sum"):
+    start_loc, end_loc = var["loc_start"].min(), var["loc_end"].max()
+    matrixes, vars = [], []
+    bin_range = distance if split is None else ((end_loc - start_loc) / split)
+    for s in range(start_loc, end_loc, bin_range):
+        t = s + bin_range
+        if inclusive == "both":
+            sel_vars = var[(var["loc_start"] < t) &
+                           (var["loc_end"] > s)]
+        elif inclusive == "left":
+            sel_vars = var[(var["loc_start"] < t) &
+                           (t >= var["loc_end"] > s)]
+        elif inclusive == "right":
+            sel_vars = var[(s <= var["loc_start"] < t) &
+                           (var["loc_end"] > s)]
+        else:
+            sel_vars = var[(s <= var["loc_start"] < t) &
+                           (t >= var["loc_end"] > s)]
+        if data[:, sel_vars.index].X.shape[1] == 0:
+            continue
+        matrixes.append(getattr(data[:, sel_vars.index].X, agg_method)(axis=1))
+        vars.append(f"chr_name_{s}:{t}")
+
+    return np.concatenate(matrixes, axis=1), pd.DataFrame(vars, index=vars)
+
+
+def bin_var(data: AnnData,
+            distance: int = 100000,
+            split: int = None,  # number of splits
+            inclusive="both"):
+    var = data.var.copy()
+    var["chromosome"] = var["gene_id"].apply(lambda x: x.split(":")[0])
+    var["gene_loc"] = var["gene_id"].apply(lambda x: x.split(":")[1])
+    var["loc_start"] = var["gene_loc"].apply(lambda x: int(x.split("-")[0]))
+    var["loc_end"] = var["gene_loc"].apply(lambda x: int(x.split("-")[1]))
+    del var["gene_loc"]
+    matrixes, vars = [], []
+    for ch in tqdm(var["chromosome"].unique()):
+        matrix, var_names = aggregate_bin(data[:, var[var["chromosome"] == ch].index],
+                                          var[var["chromosome"] == ch],
+                                          ch, distance, split, inclusive)
+        matrixes.append(matrix)
+        vars.append(var_names)
+
+    return AnnData(X=np.concatenate(matrixes, axis=1),
+                   obs=data.obs,
+                   var=pd.concat(vars, axis=0))
