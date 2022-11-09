@@ -11,7 +11,8 @@ def get_chrom_dicts(ada: AnnData):
     """
     df_meta = ada.var["gene_id"].str.split(':', expand=True).rename(columns={0:"chr", 1:'region'})
     df_meta.reset_index(inplace=True)
-    chrom_len_dict = (df_meta["chr"].value_counts()[:23]).drop(labels="chrX").to_dict() # chr1-chr22, w/o chrX, chrY
+    chrom_len_dict = (df_meta["chr"].value_counts()).to_dict() 
+    chrom_len_dict = {chrom: chrom_len_dict[chrom] for chrom in [f"chr{i+1}" for i in range(22)]} # chr1-chr22, w/o chrX, chrY
     chrom_idx_dict = {}
     for chrom in chrom_len_dict.keys(): # same key order
         chrom_idx_dict[chrom] = (df_meta.groupby("chr").groups[chrom]).to_numpy()[[0,-1]].tolist()
@@ -153,7 +154,7 @@ def aggregate_bin(data,
         if data[:, sel_vars.index].X.shape[1] == 0:
             continue
         matrixes.append(getattr(data[:, sel_vars.index].X, agg_method)(axis=1))
-        vars.append(f"{chr_name}_{s}:{t}")
+        vars.append(f"{chr_name}:{s}_{t}")
 
     return np.concatenate(matrixes, axis=1), pd.DataFrame(vars, index=vars)
 
