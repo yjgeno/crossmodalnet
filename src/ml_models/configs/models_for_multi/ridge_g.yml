@@ -1,0 +1,9 @@
+model: ridge
+alpha:
+  type: f
+  lo: 1e-3
+  hi: 1e3
+solver:
+  type: c
+  choices:
+    - cd

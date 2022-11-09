@@ -1,0 +1,16 @@
+model: svr
+coef0:
+  type: f
+  lo: 0
+  hi: 1000
+kernel:
+  type: c
+  choices:
+    - linear
+    - poly
+    - rbf
+    - sigmoid
+C:
+  type: f
+  lo: 1e-4
+  hi: 1e4

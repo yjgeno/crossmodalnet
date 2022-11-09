@@ -1,0 +1,9 @@
+model: knr
+n_neighbors:
+  type: i
+  lo: 3
+  hi: 11
+weights:
+  type: c
+  choices:
+    - uniform
