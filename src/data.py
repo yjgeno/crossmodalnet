@@ -72,7 +72,7 @@ class sc_Dataset(Dataset):
         
         
     def __len__(self):
-        return len(self.celltype)
+        return len(self.X)
 
     def __getitem__(self, idx):
         """
@@ -118,7 +118,7 @@ class sc_Dataset_index(Dataset):
         self.n_feature_Y = len(self.var_names_Y)
         
     def __len__(self):
-        return len(self.celltype)
+        return len(self.X)
 
     def __getitem__(self, idx):
         """
@@ -127,31 +127,21 @@ class sc_Dataset_index(Dataset):
         return torch.LongTensor(np.where(self.X[idx]!=0)[0]), self.Y[idx] 
 
 
-class Collator(object):
-    def __init__(self, max_len=None):
-        self._max_len = max_len
+def collator_fn(data):
+    """
+    data: a list of tuples (x_indexed, labels) for batching,
+          where x_indexed is a tensor of arbitrary shape.
+    """
+    x_indexed, labels = zip(*data)
+    lengths = [x.shape[0] for x in x_indexed]
+    max_len = max(lengths) # max_len varies across batches
+    # print("max_len:", max_len)
+    x_indexed_padd = torch.LongTensor([-1]).repeat(len(data)*max_len).view(len(data), max_len)
+    for i in range(len(data)):
+        x_indexed_padd[i][:len(data[i][0])] = data[i][0]
+    padd_mask = (x_indexed_padd < 0) # padd is True
 
-    @property
-    def max_len(self):
-        return self._max_len
-
-    def __call__(self, data):
-        """
-        data: a list of tuples (x_indexed, labels) for batching,
-              where x_indexed is a tensor of arbitrary shape.
-        """
-        x_indexed, labels = zip(*data)
-        if self.max_len is None:
-            lengths = [x.shape[0] for x in x_indexed]
-            self.max_len = max(lengths) # max_len varies across batches
-        # print("max_len", max_len)
-        # features = torch.zeros((len(data), max_len))
-        x_indexed_padd = torch.LongTensor([-1]).repeat(len(data)*self.max_len).view(len(data), self.max_len)
-        for i in range(len(data)):
-            x_indexed_padd[i][:len(data[i][0])] = data[i][0]
-        mask = (x_indexed_padd!=-1)
-
-        return x_indexed_padd.long(), torch.stack(labels), mask
+    return x_indexed_padd.long(), torch.stack(labels), padd_mask.bool()
 
 
 def load_data(dataset: Union[sc_Dataset, sc_Dataset_index],

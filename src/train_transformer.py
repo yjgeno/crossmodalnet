@@ -1,7 +1,7 @@
 import torch
 import os
 import torch.utils.tensorboard as tb
-from .data import sc_Dataset_index, Collator, load_data
+from .data import sc_Dataset_index, collator_fn, load_data
 from .model import Transformer_multi, save_model
 from .utils import corr_score
 
@@ -15,8 +15,7 @@ def train(args):
     data_path_X = os.path.join(args.data_dir, "multi_train_x.h5ad")
     data_path_Y = os.path.join(args.data_dir, "multi_train_y.h5ad")
     dataset = sc_Dataset_index(data_path_X, data_path_Y)
-    train_set = dataset
-    # train_set, val_set = load_data(dataset, batch_size = args.batch_size)
+    train_set, val_set = load_data(dataset, batch_size = args.batch_size, collate_fn=collator_fn)
 
     # init model
     model = Transformer_multi()
@@ -39,12 +38,11 @@ def train(args):
         model.train()
         loss_sum, corr_sum_train = 0., 0.
         for sample in train_set:
-            X_indexed, Y_exp = sample
-            X_indexed, Y_exp =  model.move_inputs_(X_indexed, Y_exp)
+            X_indexed, Y_exp, padd_mask = sample
+            X_indexed, Y_exp, padd_mask =  model.move_inputs_(X_indexed, Y_exp, padd_mask)
             optimizer.zero_grad()
-            pred_Y_exp = model(X_indexed)
+            pred_Y_exp = model(X_indexed, padd_mask=padd_mask)
             # print(type(pred_Y_exp), len(pred_Y_exp), type(Y_exp), len(Y_exp))
-            pred_Y_exp, Y_exp = pred_Y_exp.unsqueeze(0), Y_exp.unsqueeze(0)
             loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             train_logger.add_scalar("loss", loss.item(), global_step)
             loss_sum += loss.item()
@@ -55,24 +53,22 @@ def train(args):
         if args.verbose:
             print("(Train) epoch: {:03d}, global_step: {:d}, loss: {:.4f}, corr: {:.4f}".format(epoch, global_step, loss_sum/len(train_set), corr_sum_train/len(train_set)))
 
-        # model.eval()
-        # with torch.no_grad():
-        #     corr_sum_val = 0.
-        #     for sample in val_set:
-        #         X_exp, day, celltype, Y_exp = sample
-        #         X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
-        #         pred_Y_exp = model(X_exp)
-        #         # loss = loss_fn_ae(pred_Y_exp, Y_exp)
-        #         # valid_logger.add_scalar('loss', loss.item(), global_step)
-        #         if model.loss_ae in model.loss_type2:
-        #             pred_Y_exp = model.sample_pred_from(pred_Y_exp)
-        #         corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
-        #     train_logger.add_scalars("corr_info", 
-        #                             {"corr_train": corr_sum_train/len(train_set),
-        #                              "corr_val": corr_sum_val/len(val_set),
-        #                             }, global_step)
-        #     if args.verbose:
-        #         print("(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
+        model.eval()
+        with torch.no_grad():
+            corr_sum_val = 0.
+            for sample in val_set:
+                X_indexed, Y_exp, padd_mask = sample
+                X_indexed, Y_exp, padd_mask =  model.move_inputs_(X_indexed, Y_exp, padd_mask)
+                pred_Y_exp = model(X_indexed, padd_mask=padd_mask)
+                # loss = loss_fn_ae(pred_Y_exp, Y_exp)
+                # valid_logger.add_scalar('loss', loss.item(), global_step)
+                corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
+            train_logger.add_scalars("corr_info", 
+                                    {"corr_train": corr_sum_train/len(train_set),
+                                     "corr_val": corr_sum_val/len(val_set),
+                                    }, global_step)
+            if args.verbose:
+                print("(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
 
     if args.save:
         save_model(model)
@@ -86,9 +82,9 @@ if __name__ == "__main__":
     parser.add_argument("--log_dir", type=str, required=True)
     parser.add_argument("-l", "--loss_ae", type=str, default="mse")
     parser.add_argument("-o", "--optimizer", type=str, default="Adam")
-    parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
+    parser.add_argument("-lr", "--learning_rate", type=float, default=0.01)
     parser.add_argument("-n", "--n_epochs", type=int, default=30)
-    # parser.add_argument("-b", "--batch_size", type=int, default=256)
+    parser.add_argument("-b", "--batch_size", type=int, default=32)
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")
 

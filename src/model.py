@@ -297,11 +297,12 @@ class MULTIOME_DECODER(AE):
 class Transformer_multi(AE):
     def __init__(self, 
                 num_positions: int = 228942,
-                d_model = 64, 
-                d_internal = 64, 
-                dim_ffn = 128,
+                d_model = 256,
+                dim_ffn = 2048,
                 n_output = 23418, 
+                n_head = 8,
                 dropout = 0.,
+                num_layers = 1,
                 loss_ae: str = "mse",
                 **kwargs
                 ):
@@ -314,51 +315,45 @@ class Transformer_multi(AE):
         :param num_layers: number of TransformerLayers to use; can be whatever you want
         """
         super(Transformer_multi, self).__init__(loss_ae, "MULTIOME", hparams_dict=None)
-        self.emb = nn.Embedding(num_positions, d_model)
+        self.num_positions = num_positions
+        self.d_model = d_model
+        self.n_output = n_output
+        self.emb = nn.Embedding(num_positions+1, d_model, padding_idx = -1) # -1: padd
         # self.PositionalEncoding = PositionalEncoding(d_model, num_positions)
-        # Attention layer: set embed_dim=input_dim
-        self.self_attn = TransformerLayer(d_model, d_internal)
-        # Two-layer MLP
-        self.linear_net = nn.Sequential(
-            nn.Linear(d_model, dim_ffn),
-            nn.Dropout(dropout),
-            nn.ReLU(inplace=True),
-            nn.Linear(dim_ffn, d_model),
-        )
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(dropout)
+
+        encoder_layer = torch.nn.TransformerEncoderLayer(d_model = d_model, 
+                                                         nhead = n_head, 
+                                                         dim_feedforward = dim_ffn,
+                                                         dropout = dropout,
+                                                         batch_first = True,
+                                                         **kwargs
+                                                         )
+        self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers = num_layers)
         self.linear_class = nn.Linear(d_model, n_output)
 
         self.to(self.device)
 
-    def forward(self, X_indices, return_attn = False): # unbatched
+    def forward(self, X_indices, padd_mask = None, relu_last = True): # unbatched
         """
         X_indices: list of input indices.
         """     
-        X = self.emb(X_indices) # [seq, d_model]
+        X_indices[X_indices==-1] = self.num_positions # change index -1 to num_positions (last)
+        X = self.emb(X_indices) # [batch, seq, d_model]
+        # print("X:", X.shape, "padd_mask:", padd_mask.shape) 
         # X_pos = self.PositionalEncoding(X)
         # X = X + X_pos
-        # Attention
-        attn_out, attn = self.self_attn(X, return_attention = True)
-        X = X + self.dropout(attn_out)
-        X = self.norm1(X)
-        # MLP
-        linear_out = self.linear_net(X)
-        X = X + self.dropout(linear_out)
-        X = self.norm2(X)
-        # map to num_classes and log-softmax
-        out = self.linear_class(X) # [seq, n_output]
-        out = self.relu(out.mean(dim=0)) # [n_output]
-        if return_attn:
-            return out, attn
+        X = self.transformer_encoder(X, src_key_padding_mask = padd_mask) # mask: [batch, seq]
+        out = self.linear_class(X) # [batch, seq, n_output]
+        out = out.mean(1) # [batch, n_output]
+        if relu_last:
+            return self.relu(out) 
         return out
 
 
 def save_model(model, name: str = "multimodal"):
     from torch import save
     import os
-    if isinstance(model, (CITE_AE, MULTIOME_AE, MULTIOME_DECODER)):
+    if isinstance(model, (CITE_AE, MULTIOME_AE, MULTIOME_DECODER, Transformer_multi)):
         return save(
             model.state_dict(),
             os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{name}.th"),
@@ -366,7 +361,7 @@ def save_model(model, name: str = "multimodal"):
     raise ValueError("model type '%s' not supported!" % str(type(model)))
 
 
-def load_model(name: str = "multimodal", **kwargs):  # num_genes, num_drugs, loss_ae
+def load_model(name: str = "multimodal", **kwargs):
     from torch import load
     import os
     try:
