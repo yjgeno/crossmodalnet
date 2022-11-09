@@ -86,7 +86,8 @@ def train(io_config,
         sample_idx = np.random.choice(n_cells, n_cells // n_split)  if n_split != 1 else np.arange(0, n_cells)
         ftr_indexes.append(sample_idx)
         train_X = train_X[sample_idx, :]
-        train_y = sc.read_h5ad(io_config["input_training_y"]).X[sample_idx, :].toarray()
+        train_y = sc.read_h5ad(io_config["input_training_y"]).X[sample_idx, :]
+        y_var_len = train_y.shape[1]
 
         output_dir = Path(io_config["output_dir"])
         output_dir = Path(output_dir / f"{model_config['model_name']}")
@@ -101,7 +102,9 @@ def train(io_config,
                               use_cuml=use_gpu)
 
         # training
-        cv_object.cross_validation(train_X, train_y, param_dist=model_config["param"], **cv_config)
+        for y_ind in range(y_var_len):
+            cv_object.partial_cv(train_X, train_y[sample_idx, y_ind].toarray(),
+                                 y_ind, param_dist=model_config["param"], **cv_config)
         cv_object.save_iters(output_dir / f"cv_result_{s}.csv")
 
         if use_gpu:

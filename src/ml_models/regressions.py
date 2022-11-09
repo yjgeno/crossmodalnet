@@ -24,6 +24,8 @@ from cuml.svm import SVR as svr_cuml
 from cuml.neighbors import KNeighborsRegressor as knr_cuml
 from cuml import Ridge as ridge_cuml
 
+from dask_ml.model_selection import RandomizedSearchCV as dask_rscv
+
 FTR_SELS = {"skb": SelectKBest, "sfm": SelectFromModel}
 FTR_ESTIMATORS = {"f": f_regression, "r": r_regression}
 
@@ -58,7 +60,40 @@ class Regressor:
             self.multi_output = MultiOutputRegressor(self.pipeline)
         self.cv = None
         self._best_score = 0
+        self._best_scores = []
         self._best_params = None
+
+    @property
+    def best_score(self):
+        return np.mean(self._best_scores)
+
+    def partial_cv(self, X, y_vec,
+                   y_index,
+                   param_dist,
+                   n_cv=5,
+                   scoring="r2",
+                   n_iter=10,
+                   n_jobs=1,
+                   verbose=1
+                   ):
+        print(f"Start training model (target {y_index})")
+        print(f"scoring method: {scoring}")
+        print(f"cv: {n_cv}")
+        print(f"n_iter: {n_iter}")
+        print(f"Using GPU: {self._use_gpu}")
+        if self.cv is None:
+            self.cv = []
+        cv = dask_rscv(self.reg,
+                       param_distributions=param_dist,
+                       cv=n_cv,
+                       n_jobs=1,
+                       scoring=scoring,
+                       n_iter=n_iter,
+                       verbose=verbose)
+        self.cv.append(cv)
+        self.cv[-1].fit(X, y_vec)
+        self._best_scores.append(self.cv[-1].best_score_)
+
 
     def cross_validation(self,
                          X, y,
@@ -88,7 +123,7 @@ class Regressor:
                 self.cv.append(cv)
                 self.cv[i].fit(X, y[:, i])
                 best_scores.append(cv.best_score_)
-            self.best_scores = np.mean(best_scores)
+            self._best_scores = best_scores
         else:
             self.cv = RandomizedSearchCV(self.multi_output,
                                          param_distributions=param_dist,
@@ -98,9 +133,9 @@ class Regressor:
                                          n_iter=n_iter,
                                          verbose=verbose)
             self.cv.fit(X, y)
-            self._best_score = self.cv.best_score_
+            self._best_scores.append(self.cv.best_score_)
         print("Training finished.")
-        print("Best score:", self._best_score)
+        print("Best score:", self.best_score)
 
     def predict(self, X_test):
         if self._use_gpu:
