@@ -303,10 +303,13 @@ class MULTIOME_DECODER(AE):
         )
         self.to(self.device)
 
-    def forward(self, X, relu_last: bool = False):
+    def forward(self, X, components_ = None, relu_last: bool = False):
+        out = self.decoder(X)
+        if components_ is not None:
+            out = torch.matmul(out, components_) # map back
         if relu_last:
-            return self.relu(self.decoder(X))
-        return self.decoder(X)
+            return self.relu(out)
+        return out
 
 
 def save_model(model, name: str = "multimodal"):

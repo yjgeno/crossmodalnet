@@ -3,6 +3,8 @@ import pandas as pd
 from tqdm import tqdm
 import torch
 from anndata import AnnData 
+from sklearn.preprocessing import StandardScaler
+from sklearn import decomposition
 
 
 def get_chrom_dicts(ada: AnnData):
@@ -19,39 +21,43 @@ def get_chrom_dicts(ada: AnnData):
     return chrom_len_dict, chrom_idx_dict
 
 
-def preprocessing_(counts, key: str = None, **kwargs):
-    """
-    Args:
-        counts (dense array): cell * feature.
-    """
-    from sklearn.preprocessing import StandardScaler
-    from sklearn import decomposition  
-    # min_cells = 5
-    # counts = counts[:, np.asarray(np.sum(counts>0, axis=0) > min_cells).ravel()]
-    # print(f"Features more than {min_cells} cells to use: {counts.shape[1]}")
-    scaler = StandardScaler()
-
-    if key == "binary":
-        counts[counts != 0] = 1.
-    if key == "standard_0":       
-        counts = scaler.fit_transform(counts) # default on features
-    if key == "standard_1":
-        counts = scaler.fit_transform(counts.T).T # on sample
-    if key == "PCA":
-        counts = scaler.fit_transform(counts) # on features
-        pca = decomposition.PCA(n_components = 50, svd_solver="full", **kwargs)
-        counts = pca.fit_transform(counts)
-    if key == "tSVD": # TruncatedSVD on TF/IDF data
-        svd = decomposition.TruncatedSVD(n_components = 50, n_iter=7, random_state=42, **kwargs)
-        counts = svd.fit_transform(counts)
-    if key == "magic":
-        # pip install --user magic-impute 
-        import magic
-        magic_op = magic.MAGIC(knn=7)
-        counts = magic_op.fit_transform(counts)
-    print(f"Complete preprocessing by {key}")
-
-    return counts
+class preprocessor:
+    def __init__(self, key = None):
+        self.key = key
+                
+    def __call__(self, counts, **kwargs):
+        """
+        Args:
+            counts (dense array): cell * feature.
+        """
+        if self.key == "binary":
+            counts[counts != 0] = 1.
+        if self.key == "standard_0":  
+            self.scaler = StandardScaler()
+            counts = self.scaler.fit_transform(counts) # default on features
+        if self.key == "standard_1":
+            self.scaler = StandardScaler()
+            counts = self.scaler.fit_transform(counts.T).T # on sample
+        if self.key == "PCA":
+            self.scaler = StandardScaler()
+            counts = self.scaler.fit_transform(counts) # on features
+            self.pca = decomposition.PCA(n_components=50, svd_solver="full", **kwargs)
+            counts = self.pca.fit_transform(counts)
+        if self.key == "tSVD": # TruncatedSVD on TF/IDF data
+            self.svd = decomposition.TruncatedSVD(n_components=50, n_iter=7, random_state=42, **kwargs)
+            counts = self.svd.fit_transform(counts)
+        if self.key == "magic":
+            # pip install --user magic-impute 
+            import magic
+            self.magic_op = magic.MAGIC(knn=7, **kwargs)
+            counts = self.magic_op.fit_transform(counts)
+        if self.key == "tfidf":
+            from sklearn.feature_extraction.text import TfidfTransformer
+            self.tfidf = TfidfTransformer()
+            counts = self.tfidf.fit_transform(counts).toarray()
+        
+        print(f"Complete preprocessing by {self.key}")
+        return counts
 
 
 def check_training_data(ada_X: AnnData, ada_Y: AnnData):

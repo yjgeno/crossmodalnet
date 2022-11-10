@@ -5,7 +5,7 @@ import scipy
 import numpy as np
 from typing import Union
 from sklearn.preprocessing import OneHotEncoder
-from .utils import check_training_data, get_chrom_dicts, preprocessing_, Indexer
+from .utils import check_training_data, get_chrom_dicts, preprocessor, Indexer
 
 
 class sc_Dataset(Dataset):
@@ -18,31 +18,34 @@ class sc_Dataset(Dataset):
                 time_key: str = "day",
                 celltype_key: str = "cell_type",
                 preprocessing_key: str = None,
+                prep_Y: bool = False,
                 **kwargs
                 ):
         """
         Args:
             data_path: Path to .h5ad file.
         """
+        # process X
         data = sc.read_h5ad(data_path_X)
         sc.pp.filter_genes(data, min_cells = 5) # filter feature
         print(f"Features to use: {data.shape[1]}")
         counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
-        counts = preprocessing_(counts, key = preprocessing_key, **kwargs)
-        data_Y = sc.read_h5ad(data_path_Y)
-        check_training_data(data, data_Y)
+        self.processor = preprocessor(key = preprocessing_key)
+        counts = self.processor(counts, **kwargs)
+        # print("components_", self.processor.svd.components_.shape) # [#PCs, Features to use]
         try:
             self.chrom_len_dict, self.chrom_idx_dict = get_chrom_dicts(data)
         except Exception:
             pass
         self.X = torch.Tensor(counts)
         self.var_names_X = data.var_names.to_numpy() # X feature names
-        self.n_feature_X = counts.shape[1] # X feature no.
+        self.n_feature_X = counts.shape[1] # init n_input
+
+        # process meta data
         self.day = data.obs[time_key].to_numpy()
         self.unique_day = np.unique(data.obs[time_key].values)
         self.celltype = data.obs[celltype_key].to_numpy()
         self.unique_celltype = np.unique(data.obs[celltype_key].values)
-
         encoder_day = OneHotEncoder(sparse=False)
         encoder_day.fit(self.unique_day.reshape(-1, 1))  # (# day, 1)
         # self.encoder_day = encoder_day
@@ -61,15 +64,17 @@ class sc_Dataset(Dataset):
                     torch.Tensor(encoder_celltype.transform(self.unique_celltype.reshape(-1, 1))),
                 )
             )
-        
-        self.Y = (
-            torch.Tensor(data_Y.X.A)
-            if scipy.sparse.issparse(data_Y.X)
-            else torch.Tensor(data_Y.X)
-        )
+
+        # process Y
+        data_Y = sc.read_h5ad(data_path_Y)
+        check_training_data(data, data_Y)
+        counts_Y = data_Y.X.toarray() if scipy.sparse.issparse(data_Y.X) else data_Y.X # dense
+        self.n_feature_Y = counts_Y.shape[1] # init n_output 
+        if prep_Y:
+            counts_Y_reduced = self.processor(counts_Y, **kwargs)  
+            self.n_feature_Y = counts_Y_reduced.shape[1]     
+        self.Y = torch.Tensor(counts_Y)
         self.var_names_Y = data_Y.var_names.to_numpy() # Y feature names
-        self.n_feature_Y = len(self.var_names_Y)
-        
         
     def __len__(self):
         return len(self.celltype)
@@ -95,27 +100,26 @@ class sc_Dataset_index(Dataset):
         Args:
             data_path: Path to .h5ad file.
         """
+        # process X
         data = sc.read_h5ad(data_path_X)
         sc.pp.filter_genes(data, min_cells = 5) # filter feature
         print(f"Features to use: {data.shape[1]}")
-        counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
-        self.X = preprocessing_(counts, key = preprocessing_key, **kwargs)   
-        
+        counts_X = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
+        self.processor = preprocessor(key = preprocessing_key)
+        self.X = self.processor(counts_X, **kwargs)
         self.var_names_X = data.var_names.to_numpy() # selected X feature names
-        self.n_feature_X = counts.shape[1] # X feature no.
+        self.n_feature_X = counts_X.shape[1] # X feature no.
 #         self.indexer = Indexer()
 #         for feature in data.var["gene_id"]:
 #             self.indexer.add_and_get_index(feature)
-        
+
+        # process Y   
         data_Y = sc.read_h5ad(data_path_Y)
         check_training_data(data, data_Y)      
-        self.Y = (
-            torch.Tensor(data_Y.X.A)
-            if scipy.sparse.issparse(data_Y.X)
-            else torch.Tensor(data_Y.X)
-        )
+        counts_Y = data_Y.X.toarray() if scipy.sparse.issparse(data_Y.X) else data_Y.X # dense    
+        self.Y = torch.Tensor(counts_Y)
         self.var_names_Y = data_Y.var_names.to_numpy() # Y feature names
-        self.n_feature_Y = len(self.var_names_Y)
+        self.n_feature_Y = counts_Y.shape[1] 
         
     def __len__(self):
         return len(self.celltype)
