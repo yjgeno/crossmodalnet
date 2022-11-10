@@ -8,7 +8,7 @@ class MLP(torch.nn.Module):
     """
     A multilayer perceptron class.
     """
-    def __init__(self, sizes, batch_norm=False, dropout=0.):
+    def __init__(self, sizes, batch_norm=True, dropout=0.05):
         super(MLP, self).__init__()
         layers = []
         for s in range(len(sizes) - 1):
@@ -304,7 +304,7 @@ class MULTIOME_DECODER(AE):
         self.to(self.device)
 
     def forward(self, X, components_ = None, relu_last: bool = False):
-        out = self.decoder(X)
+        out = self.decoder(X) + X
         if components_ is not None:
             out = torch.matmul(out, components_) # map back
         if relu_last:

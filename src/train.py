@@ -38,7 +38,7 @@ def train(args):
             model = MULTIOME_DECODER(n_input = dataset.n_feature_X, 
                                      n_output= dataset.n_feature_Y,
                                      loss_ae = args.loss_ae,
-                                     hparams_dict={"autoencoder_width": [512, 512, 512]},
+                                     hparams_dict={"autoencoder_width": [512]*3},
                                     )
         else:
             model = MULTIOME_AE(chrom_len_dict = dataset.chrom_len_dict, 
@@ -60,7 +60,14 @@ def train(args):
         optimizer = torch.optim.SGD(model.parameters(), lr = args.learning_rate, momentum = 0.9, weight_decay = 0)
     if args.sch:
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience = 5, threshold = 0.002, verbose=args.verbose)
-        scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.01, max_lr=0.1, step_size_up=10, verbose=args.verbose)
+        scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, 
+                                                      base_lr=0.12, 
+                                                      max_lr=0.38, 
+                                                      step_size_up=30, 
+                                                      cycle_momentum=False,
+                                                      verbose=args.verbose
+                                                      )
+        # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1.*(epoch+1), verbose=True) # tune CyclicLR only
     
     # logging
     train_logger, valid_logger = None, None
@@ -77,7 +84,8 @@ def train(args):
             X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
             optimizer.zero_grad()         
             if args.prep in ["PCA", "tSVD"]:
-                components_ = torch.Tensor(dataset.processor.svd.components_) # [#PCs, n_output]
+                components_ = torch.Tensor(dataset.processor.svd.components_)
+                components_ = model.move_inputs_(components_)[0] # [#PCs, n_output]
                 pred_Y_exp = model(X_exp, components_)
             else: 
                 pred_Y_exp = model(X_exp)
@@ -138,7 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--prep_y", action="store_true")
     parser.add_argument("-l", "--loss_ae", type=str, default="mse")
     parser.add_argument("-o", "--optimizer", type=str, default="Adam")
-    parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
+    parser.add_argument("-lr", "--learning_rate", type=float, default=0.01)
     parser.add_argument("--sch", action = "store_true")
     parser.add_argument("-n", "--n_epochs", type=int, default=30)
     parser.add_argument("-b", "--batch_size", type=int, default=256)
