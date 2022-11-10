@@ -77,10 +77,12 @@ class NCorrLoss(Loss_):
         target_n = y - self.tile(y)
         pred_n = pred_n / self.tile(pred_n, method="norm")
         target_n = target_n / self.tile(target_n, method="norm")
-        r = (pred_n * target_n).sum(dim=1).mean() # [-1, 1]
+        r = (pred_n * target_n).sum(dim=1).mean() # [-1, 1], reduction="mean"
         # print("r:", r)
         r = max((r + 1)/2, torch.tensor(eps, dtype=torch.float)) # [eps, 1]
         # # to confirm corr calculation:
         # z = torch.cat([pred_y, y], dim=0)
         # r = torch.corrcoef(z)[:pred_y.shape[0], pred_y.shape[0]:].diagonal().mean() # off-diagnoal corr
-        return -torch.log(r) # torch.exp(1-r)
+        loss = (-torch.log(r))**0.15
+        # loss = 10**(1-r) - 1 
+        return loss
