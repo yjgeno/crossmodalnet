@@ -103,7 +103,7 @@ def train(io_config,
 
         # training
         for y_ind in range(y_var_len):
-            cv_object.partial_cv(train_X, train_y[:, y_ind].toarray(),
+            cv_object.partial_cv(train_X, train_y[:, y_ind].toarray().ravel(),
                                  y_ind, param_dist=model_config["param"], **cv_config)
         cv_object.save_iters(output_dir / f"cv_result_{s}.csv")
 

@@ -17,7 +17,7 @@ def parse_config(config, use_gpu) -> dict:
     print(config)
     for k, v in config.items():
         if v["type"] == "c":
-            params[f"{k}" if use_gpu else f"estimator__{k}"] = v["choices"]
+            params[f"{k}" if use_gpu else f"{k}"] = v["choices"]
         else:
-            params[f"{k}" if use_gpu else f"estimator__{k}"] = dist[v["type"]](v["lo"], v["hi"])
+            params[f"{k}" if use_gpu else f"{k}"] = dist[v["type"]](v["lo"], v["hi"])
     return params

@@ -19,10 +19,28 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import matthews_corrcoef
 from sklearn.multioutput import MultiOutputRegressor
 
-from cuml.ensemble import RandomForestRegressor as rfr_cuml
-from cuml.svm import SVR as svr_cuml
-from cuml.neighbors import KNeighborsRegressor as knr_cuml
-from cuml import Ridge as ridge_cuml
+try:
+    from cuml.ensemble import RandomForestRegressor as rfr_cuml
+    from cuml.svm import SVR as svr_cuml
+    from cuml.neighbors import KNeighborsRegressor as knr_cuml
+    from cuml import Ridge as ridge_cuml
+
+    REGRESSORS_CUML = {"rfr": rfr_cuml,
+                       "svr": svr_cuml,
+                       "knr": knr_cuml,
+                       "ridge": ridge_cuml,
+                       }
+
+except ModuleNotFoundError as e:
+    print(e)
+    print("Use sklearn instead")
+
+    REGRESSORS_CUML = {"knr": KNeighborsRegressor,
+              "rfr": RandomForestRegressor,
+              "svr": SVR,
+              "dtr": DecisionTreeRegressor,
+              "rnr": RadiusNeighborsRegressor,
+              "gbr": GradientBoostingRegressor}
 
 from dask_ml.model_selection import RandomizedSearchCV as dask_rscv
 
@@ -36,11 +54,6 @@ REGRESSORS = {"knr": KNeighborsRegressor,
               "rnr": RadiusNeighborsRegressor,
               "gbr": GradientBoostingRegressor}
 
-REGRESSORS_CUML = {"rfr": rfr_cuml,
-                   "svr": svr_cuml,
-                   "knr": knr_cuml,
-                   "ridge": ridge_cuml,
-                   }
 
 # xgboost? voting?
 
@@ -83,12 +96,13 @@ class Regressor:
         print(f"Using GPU: {self._use_gpu}")
         if self.cv is None:
             self.cv = []
-        cv = dask_rscv(self.reg,
-                       param_distributions=param_dist,
-                       cv=n_cv,
-                       n_jobs=1,
-                       scoring=scoring,
-                       n_iter=n_iter)
+        cv = RandomizedSearchCV(self.reg,
+                               param_distributions=param_dist,
+                               cv=n_cv,
+                               n_jobs=1,
+                               scoring=scoring,
+                               n_iter=n_iter,
+                               verbose=verbose)
         self.cv.append(cv)
         self.cv[-1].fit(X, y_vec)
         self._best_scores.append(self.cv[-1].best_score_)

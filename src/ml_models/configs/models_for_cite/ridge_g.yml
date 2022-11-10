@@ -1,8 +1,8 @@
 model: ridge
 alpha:
-  type: f
-  lo: 1e-3
-  hi: 1e3
+  type: l
+  lo: 0.001
+  hi: 1000
 solver:
   type: c
   choices:

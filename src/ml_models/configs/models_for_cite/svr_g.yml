@@ -11,6 +11,6 @@ kernel:
     - rbf
     - sigmoid
 C:
-  type: f
-  lo: 1e-4
-  hi: 1e4
+  type: l
+  lo: 0.0001
+  hi: 10000
