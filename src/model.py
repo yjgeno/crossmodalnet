@@ -8,7 +8,7 @@ class MLP(torch.nn.Module):
     """
     A multilayer perceptron class.
     """
-    def __init__(self, sizes, batch_norm=True, dropout=0.1):
+    def __init__(self, sizes, batch_norm=False, dropout=0.):
         super(MLP, self).__init__()
         layers = []
         for s in range(len(sizes) - 1):
@@ -17,7 +17,7 @@ class MLP(torch.nn.Module):
                 torch.nn.BatchNorm1d(sizes[s + 1])
                 if batch_norm and s < len(sizes) - 2
                 else None,
-                torch.nn.SELU(), # TODO
+                torch.nn.ReLU(), # TODO
                 torch.nn.Dropout(p = dropout)
             ]
         layers = [l for l in layers if l is not None][:-2] # last layer
@@ -55,6 +55,11 @@ class AE(torch.nn.Module):
             self.loss_fn_ae = torch.nn.MSELoss()
         elif self.loss_ae == "L1":
             self.loss_fn_ae = torch.nn.L1Loss()
+        elif self.loss_ae == "poisson":
+            self.loss_fn_ae = torch.nn.PoissonNLLLoss(log_input=False)
+        elif self.loss_ae == "comb":
+            self.loss_fn_ae_1 = NCorrLoss()
+            self.loss_fn_ae_2 = torch.nn.PoissonNLLLoss()
         else:
             raise Exception("")
 
@@ -70,7 +75,7 @@ class AE(torch.nn.Module):
         if self.mode == "MULTIOME":
             self._hparams = {
                 "latent_dim": 128,
-                "autoencoder_width": [1024, 512],
+                "autoencoder_width": [4096, 4096, 4096],
             }  # set default
         if hparams_dict is not None:
             for key in hparams_dict:
@@ -94,6 +99,21 @@ class AE(torch.nn.Module):
 
     def forward(self):
         raise NotImplementedError("Implement forward in subclass.")
+
+    def sample_pred_from(self, reconstructions):
+        if not self.loss_ae in self.loss_type2:
+            raise ValueError("")
+        else:
+            pred_means, pred_vars = (
+                reconstructions[:, :reconstructions.size(1)//2],
+                reconstructions[:, reconstructions.size(1)//2:],
+            )
+            if self.loss_ae == "gauss":
+                pred_means = torch.normal(mean=pred_means, std=pred_vars)
+                pred_means = torch.clamp(pred_means, min=0., max=1e4) # neg in protein counts
+            if self.loss_ae == "nb":
+                pred_means = torch.clamp(pred_means, min=0., max=1e4)  # TODO
+            return pred_means 
 
 
 class CITE_AE(AE):
@@ -156,28 +176,13 @@ class CITE_AE(AE):
             return reconstructions, latent_basal
         return reconstructions
 
-    def sample_pred_from(self, reconstructions):
-        if not self.loss_ae in self.loss_type2:
-            raise ValueError("")
-        else:
-            pred_means, pred_vars = (
-                reconstructions[:, : self.n_output],
-                reconstructions[:, self.n_output :],
-            )
-            if self.loss_ae == "gauss":
-                pred_means = torch.normal(mean=pred_means, std=pred_vars)
-                # pred_means = torch.clamp(pred_means, min=0., max=1e4) # neg in protein counts
-            if self.loss_ae == "nb":
-                pass  # TODO
-            return pred_means  # TODO
-
 
 class MULTIOME_ENCODER(torch.nn.Module):
     """
     An encoder class for ATAC.
     """
 
-    def __init__(self, chrom_len_dict, chrom_idx_dict, sizes, att: bool = False):
+    def __init__(self, chrom_len_dict, chrom_idx_dict, d_model, att: bool = False):
         super(MULTIOME_ENCODER, self).__init__()
         self.chrom_len_dict = chrom_len_dict
         self.chrom_idx_dict = chrom_idx_dict
@@ -185,14 +190,14 @@ class MULTIOME_ENCODER(torch.nn.Module):
         self.chrom_encoders = {}
         for chrom in chrom_len_dict.keys():  # same key order
             self.chrom_encoders[chrom] = MLP(
-                [chrom_len_dict[chrom]] + sizes[1:] + [sizes[0]]  # latent
+                [chrom_len_dict[chrom]] + [d_model]*2  # latent
             )
-        self.joint_encoder = MLP([sizes[0] * self.n_chrom] + sizes[1:] + [sizes[0]])
+        # self.joint_encoder = MLP([sizes[0] * self.n_chrom] + sizes[1:] + [sizes[0]])
         self.attention = att
         if self.attention:
-            encoder_layer = torch.nn.TransformerEncoderLayer(d_model = sizes[0], 
+            encoder_layer = torch.nn.TransformerEncoderLayer(d_model = d_model, 
                                                              nhead = 4, 
-                                                             dim_feedforward = 512,
+                                                             dim_feedforward = 1024,
                                                              batch_first = False)
             self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers = 6)
 
@@ -209,7 +214,7 @@ class MULTIOME_ENCODER(torch.nn.Module):
             x_breaks = self.transformer_encoder(x_breaks)
         x_cat = torch.cat([*x_breaks], dim=1)  # concat all to joint encoder: Batch * (latent_dim*chrom)
         # print("x_cat", x_cat.shape)
-        return self.joint_encoder(x_cat)
+        return x_cat
 
 
 class MULTIOME_AE(AE):
@@ -227,6 +232,8 @@ class MULTIOME_AE(AE):
     ):
         super(MULTIOME_AE, self).__init__(loss_ae, "MULTIOME", hparams_dict)
         self.n_output = n_output  # dim
+        if loss_ae in self.loss_type2:
+            n_output = n_output * 2
 
         # set hyperparameters
         self.set_hparams(hparams_dict=hparams_dict)
@@ -235,12 +242,12 @@ class MULTIOME_AE(AE):
         self.encoder = MULTIOME_ENCODER(
             chrom_len_dict,
             chrom_idx_dict,
-            sizes=[self.hparams["latent_dim"]] + self.hparams["autoencoder_width"],
+            d_model=self.hparams["latent_dim"],
             **kwargs
         )
         self.decoder = MLP(
-            [self.hparams["latent_dim"]]
-            + list(reversed(self.hparams["autoencoder_width"]))
+            [self.encoder.n_chrom * self.hparams["latent_dim"]]
+            + self.hparams["autoencoder_width"]
             + [n_output]
         )
         self.move_inputs_(*list(self.encoder.chrom_encoders.values())) # send each chrom MLP to GPU
@@ -250,16 +257,26 @@ class MULTIOME_AE(AE):
         self,
         X,
         return_latent: bool = False,
-        relu_last: bool = True,
+        relu_last: bool = False,
     ):
         """
         Predict Y given X.
         """
         latent_basal = self.encoder(X)
         reconstructions = self.decoder(latent_basal)
+
+        if self.loss_ae == "gauss":
+            pred_means = reconstructions[:, : self.n_output]
+            pred_vars = F.softplus(reconstructions[:, self.n_output :]).add(1e-3) 
+            reconstructions = torch.cat([pred_means, pred_vars], dim=1)
+
+        if self.loss_ae == "nb":
+            pred_means = F.softplus(reconstructions[:, : self.n_output]).add(1e-3)
+            pred_vars = F.softplus(reconstructions[:, self.n_output :]).add(1e-3)
+            reconstructions = torch.cat([pred_means, pred_vars], dim=1)
+
         if relu_last:
             reconstructions = self.relu(reconstructions)
-
         if return_latent:
             return reconstructions, latent_basal
         return reconstructions
@@ -286,7 +303,7 @@ class MULTIOME_DECODER(AE):
         )
         self.to(self.device)
 
-    def forward(self, X, relu_last: bool = True):
+    def forward(self, X, relu_last: bool = False):
         if relu_last:
             return self.relu(self.decoder(X))
         return self.decoder(X)

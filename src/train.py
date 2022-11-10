@@ -46,15 +46,19 @@ def train(args):
                                 loss_ae = args.loss_ae,
                                 att = args.att,
                                 )
+    try:
+        print(model.encoder.chrom_encoders)
+    except Exception:
+        pass
     print(model)
 
     # optimizer
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = 1e-5)
     elif args.optimizer == 'SGD':
-        optimizer = torch.optim.SGD(model.parameters(), lr = args.learning_rate, momentum = 0.9, weight_decay = 5e-4)
-    if args.schedule_lr:
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience = 5)
+        optimizer = torch.optim.SGD(model.parameters(), lr = args.learning_rate, momentum = 0.9, weight_decay = 0)
+    if args.sch:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience = 5, threshold = 0.002, verbose=args.verbose)
     
     # logging
     train_logger, valid_logger = None, None
@@ -71,7 +75,10 @@ def train(args):
             X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
             optimizer.zero_grad()
             pred_Y_exp = model(X_exp)
-            loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
+            if model.loss_ae == "comb":
+                loss = model.loss_fn_ae_1(pred_Y_exp, Y_exp) + model.loss_fn_ae_2(pred_Y_exp, Y_exp)
+            else:
+                loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             train_logger.add_scalar("loss", loss.item(), global_step)
             loss_sum += loss.item()
             if model.loss_ae in model.loss_type2:
@@ -102,7 +109,7 @@ def train(args):
             if args.verbose:
                 print("(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
 
-        if args.schedule_lr:
+        if args.sch:
             train_logger.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step)
             scheduler.step(corr_sum_val/len(val_set)) # update according to valid set
 
@@ -121,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--loss_ae", type=str, default="mse")
     parser.add_argument("-o", "--optimizer", type=str, default="Adam")
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
-    parser.add_argument('--schedule_lr', action = "store_true")
+    parser.add_argument("--sch", action = "store_true")
     parser.add_argument("-n", "--n_epochs", type=int, default=30)
     parser.add_argument("-b", "--batch_size", type=int, default=256)
     parser.add_argument("--att", action="store_true")
