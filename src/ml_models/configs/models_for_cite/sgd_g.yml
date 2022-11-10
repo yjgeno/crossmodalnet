@@ -1,0 +1,22 @@
+model: sgd
+alpha:
+  type: l
+  lo: 0.0001
+  hi: 100000
+penalty:
+  type: c
+  choices:
+    - none
+    - l1
+    - l2
+    - elasticnet
+learning_rate:
+  type: c
+  choices:
+    - constant
+    - adaptive
+    - n_iter_no_change
+batch_size:
+  type: i
+  lo: 64
+  hi: 256

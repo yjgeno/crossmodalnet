@@ -24,11 +24,13 @@ try:
     from cuml.svm import SVR as svr_cuml
     from cuml.neighbors import KNeighborsRegressor as knr_cuml
     from cuml import Ridge as ridge_cuml
+    from cuml.linear_model import MBSGDRegressor as sgd_cuml
 
     REGRESSORS_CUML = {"rfr": rfr_cuml,
                        "svr": svr_cuml,
                        "knr": knr_cuml,
                        "ridge": ridge_cuml,
+                       "sgd_cuml": sgd_cuml
                        }
 
 except ModuleNotFoundError as e:
