@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 import joblib
 
-from regressions import *
-from utils import *
+from .regressions import *
+from .utils import *
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import TruncatedSVD
