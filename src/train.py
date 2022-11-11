@@ -24,6 +24,7 @@ def train(args):
             celltype_key = "cell_type",
             preprocessing_key = args.prep,
             prep_Y = args.prep_y,
+            n_components = args.n_pc, # only used in tSVD and PCA
             )
     train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 
@@ -150,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--sch", action = "store_true")
     parser.add_argument("-n", "--n_epochs", type=int, default=30)
     parser.add_argument("-b", "--batch_size", type=int, default=256)
+    parser.add_argument("-n_pc", type=int, default=50)
     parser.add_argument("--att", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")

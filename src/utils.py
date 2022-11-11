@@ -25,7 +25,7 @@ class preprocessor:
     def __init__(self, key = None):
         self.key = key
                 
-    def __call__(self, counts, **kwargs):
+    def __call__(self, counts, **kwargs): # n_components
         """
         Args:
             counts (dense array): cell * feature.
@@ -41,10 +41,10 @@ class preprocessor:
         if self.key == "PCA":
             self.scaler = StandardScaler()
             counts = self.scaler.fit_transform(counts) # on features
-            self.pca = decomposition.PCA(n_components=50, svd_solver="full", **kwargs)
+            self.pca = decomposition.PCA(svd_solver="full", **kwargs)
             counts = self.pca.fit_transform(counts)
         if self.key == "tSVD": # TruncatedSVD on TF/IDF data
-            self.svd = decomposition.TruncatedSVD(n_components=50, n_iter=7, random_state=42, **kwargs)
+            self.svd = decomposition.TruncatedSVD(n_iter=7, random_state=42, **kwargs)
             counts = self.svd.fit_transform(counts)
         if self.key == "magic":
             # pip install --user magic-impute 
