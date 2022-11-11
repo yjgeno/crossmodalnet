@@ -13,12 +13,15 @@ from .utils import corr_score
 hyperparams = {
 "lr": tune.qloguniform(1e-4, 1e-1, 5e-5),
 "seed": tune.randint(0, 10000),
-"loss_ae": tune.choice(["mse", "ncorr",]),
+"loss_ae": tune.choice(["mse", "ncorr", "comb"]),
 "weight_decay": tune.sample_from(lambda _: np.random.randint(0, 9)*(0.1**np.random.randint(3, 7))),
 "n_pc": tune.choice([30, 50, 100]),
 "batch_size": tune.choice([128, 256, 512]),
 "max_lr": tune.qloguniform(1e-1, 5e-1, 2e-2),
 "step_size_up": tune.choice([10, 20, 30, 50]),
+"dropout": tune.choice([0, 0.05, 0.1, 0.2]),
+"batch_norm": tune.choice([True, False]),
+"relu_last": tune.choice([True, False]),
 "hparams_dict": {"autoencoder_width": tune.choice([[384, 1024, 384], [512]*3])} # "latent_dim": tune.choice([256, 128])
               }
 
@@ -47,7 +50,9 @@ def train(config):
                             n_output= dataset.n_feature_Y,
                             loss_ae = config["loss_ae"],
                             hparams_dict = config["hparams_dict"],
-                        )
+                            batch_norm = config["batch_norm"],
+                            dropout = config["dropout"],
+                            )
     # optimizer
     optimizer = torch.optim.SGD(model.parameters(), lr = config["lr"], momentum=0.9, weight_decay = config["weight_decay"])
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, 
@@ -65,7 +70,7 @@ def train(config):
             optimizer.zero_grad()
             components_ = torch.Tensor(dataset.processor.svd.components_)
             components_ = model.move_inputs_(components_)[0] 
-            pred_Y_exp = model(X_exp, components_)
+            pred_Y_exp = model(X_exp, components_, relu_last=config["relu_last"])
             loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             loss_sum += loss.item()
             corr_sum_train += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
@@ -79,7 +84,7 @@ def train(config):
             for sample in val_set:
                 X_exp, day, celltype, Y_exp = sample
                 X_exp, day, celltype, Y_exp =  model.move_inputs_(X_exp, day, celltype, Y_exp)
-                pred_Y_exp = model(X_exp, components_)
+                pred_Y_exp = model(X_exp, components_, relu_last=config["relu_last"])
                 corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
         
         scheduler.step()

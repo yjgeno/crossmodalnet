@@ -292,6 +292,7 @@ class MULTIOME_DECODER(AE):
         n_output: int,
         loss_ae: str = "mse",
         hparams_dict: dict = None,
+        **kwargs
     ):
         super(MULTIOME_DECODER, self).__init__(loss_ae, "MULTIOME", hparams_dict)
         self.n_input = n_input
@@ -299,7 +300,8 @@ class MULTIOME_DECODER(AE):
         self.decoder = MLP(
             [n_input]
             + list(reversed(self.hparams["autoencoder_width"]))
-            + [n_output] 
+            + [n_output],
+            **kwargs  # dropout
         )
         self.to(self.device)
 
