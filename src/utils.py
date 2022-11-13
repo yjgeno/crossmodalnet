@@ -32,14 +32,16 @@ def reorder_chroms(ada: AnnData):
     df_meta = ada.var["gene_id"].str.split(':', expand=True).rename(columns={0:"chr", 1:'region'})
     df_meta = df_meta.join(df_meta["region"].str.split('-', expand=True).rename(columns={0:"start", 1:'end'}))
     df_meta.reset_index(inplace=True)
-    df_meta_to_use = df_meta[df_meta["chr"].isin(CHROMS_IN_USE)]
+    df_meta_to_use = df_meta[df_meta["chr"].isin(CHROMS_IN_USE)].copy()
     df_meta_to_use["chr_no"] = df_meta_to_use["chr"].str[3:] # "chr"
     df_meta_to_use.sort_values(by=['chr', 'start'], ascending=True, inplace=True)
 
-    counts_new = np.zeros((len(df_meta_to_use), len(ada))) # [feature, cell]
+    counts_new = np.zeros((len(df_meta_to_use), len(ada)), dtype=np.float32) # [feature, cell]
     counts = ada.X.A.T
     for i, ii in enumerate(df_meta_to_use.index):
         counts_new[i] = counts[int(ii)] # reorder 
+    df_meta_to_use.index = df_meta_to_use.index.astype(str)
+    print("Complete reordering features")
     return sc.AnnData(counts_new.T, obs=ada.obs, var=df_meta_to_use)
 
 
