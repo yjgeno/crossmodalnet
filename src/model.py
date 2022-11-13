@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .loss import NBLoss, GaussNLLLoss, NCorrLoss
-from .activation import MultiheadAttention, AttentionEncoderBlock
-from .transformer import TransformerLayer
+from .activation import PositionalEncoding
 
 
 class MLP(torch.nn.Module):
@@ -19,7 +18,7 @@ class MLP(torch.nn.Module):
                 torch.nn.BatchNorm1d(sizes[s + 1])
                 if batch_norm and s < len(sizes) - 2
                 else None,
-                torch.nn.SELU(), # TODO
+                torch.nn.ReLU(), # TODO
                 torch.nn.Dropout(p = dropout)
             ]
         layers = [l for l in layers if l is not None][:-2] # last layer
@@ -319,7 +318,7 @@ class Transformer_multi(AE):
         self.d_model = d_model
         self.n_output = n_output
         self.emb = nn.Embedding(num_positions+1, d_model, padding_idx = -1) # -1: padd
-        # self.PositionalEncoding = PositionalEncoding(d_model, num_positions)
+        self.PositionalEncoding = PositionalEncoding(d_model, num_positions)
 
         encoder_layer = torch.nn.TransformerEncoderLayer(d_model = d_model, 
                                                          nhead = n_head, 
@@ -329,7 +328,12 @@ class Transformer_multi(AE):
                                                          **kwargs
                                                          )
         self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer, num_layers = num_layers)
-        self.linear_class = nn.Linear(d_model, n_output)
+        self.decoder = nn.Sequential(nn.Linear(d_model, 4*d_model),
+                                     nn.ReLU(),
+                                     nn.Linear(4*d_model, 4*d_model),
+                                     nn.ReLU(),
+                                    )
+        self.linear_class = nn.Linear(d_model*4, n_output)
 
         self.to(self.device)
 
@@ -340,10 +344,10 @@ class Transformer_multi(AE):
         X_indices[X_indices==-1] = self.num_positions # change index -1 to num_positions (last)
         X = self.emb(X_indices) # [batch, seq, d_model]
         # print("X:", X.shape, "padd_mask:", padd_mask.shape) 
-        # X_pos = self.PositionalEncoding(X)
-        # X = X + X_pos
+        X_pos = self.PositionalEncoding(X)
+        X = X + X_pos
         X = self.transformer_encoder(X, src_key_padding_mask = padd_mask) # mask: [batch, seq]
-        out = self.linear_class(X) # [batch, seq, n_output]
+        out = self.linear_class(self.decoder(X)) # [batch, seq, n_output]
         out = out.mean(1) # [batch, n_output]
         if relu_last:
             return self.relu(out) 

@@ -18,7 +18,9 @@ def train(args):
     train_set, val_set = load_data(dataset, batch_size = args.batch_size, collate_fn=collator_fn)
 
     # init model
-    model = Transformer_multi()
+    model = Transformer_multi(num_positions=dataset.n_feature_X, 
+                              n_output=dataset.n_feature_Y,
+                              )
     print(model)
 
     # optimizer
