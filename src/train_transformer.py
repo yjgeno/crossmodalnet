@@ -40,10 +40,16 @@ def train(args):
         model.train()
         loss_sum, corr_sum_train = 0., 0.
         for sample in train_set:
-            X_indexed, Y_exp, padd_mask = sample
-            X_indexed, Y_exp, padd_mask =  model.move_inputs_(X_indexed, Y_exp, padd_mask)
             optimizer.zero_grad()
-            pred_Y_exp = model(X_indexed, padd_mask=padd_mask)
+            if args.batch_size == 1: 
+                X_indexed, Y_exp = sample
+                X_indexed, Y_exp =  model.move_inputs_(X_indexed.unsqueeze(0), Y_exp.unsqueeze(0))  
+                # print("check_shape", X_indexed.shape, Y_exp.shape)
+                pred_Y_exp = model(X_indexed)
+            else:
+                X_indexed, Y_exp, padd_mask = sample
+                X_indexed, Y_exp, padd_mask =  model.move_inputs_(X_indexed, Y_exp, padd_mask)  
+                pred_Y_exp = model(X_indexed, padd_mask=padd_mask)
             # print(type(pred_Y_exp), len(pred_Y_exp), type(Y_exp), len(Y_exp))
             loss = model.loss_fn_ae(pred_Y_exp, Y_exp)
             train_logger.add_scalar("loss", loss.item(), global_step)
@@ -59,9 +65,14 @@ def train(args):
         with torch.no_grad():
             corr_sum_val = 0.
             for sample in val_set:
-                X_indexed, Y_exp, padd_mask = sample
-                X_indexed, Y_exp, padd_mask =  model.move_inputs_(X_indexed, Y_exp, padd_mask)
-                pred_Y_exp = model(X_indexed, padd_mask=padd_mask)
+                if args.batch_size == 1: 
+                    X_indexed, Y_exp = sample
+                    X_indexed, Y_exp =  model.move_inputs_(X_indexed.unsqueeze(0), Y_exp.unsqueeze(0))  
+                    pred_Y_exp = model(X_indexed)
+                else:
+                    X_indexed, Y_exp, padd_mask = sample
+                    X_indexed, Y_exp, padd_mask =  model.move_inputs_(X_indexed, Y_exp, padd_mask)  
+                    pred_Y_exp = model(X_indexed, padd_mask=padd_mask)
                 # loss = loss_fn_ae(pred_Y_exp, Y_exp)
                 # valid_logger.add_scalar('loss', loss.item(), global_step)
                 corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
