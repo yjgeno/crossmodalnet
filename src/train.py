@@ -25,6 +25,7 @@ def train(args):
             preprocessing_key = args.prep,
             prep_Y = args.prep_y,
             n_components = args.n_pc, # only used in tSVD and PCA
+            save_prep = args.save,
             )
     train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 

@@ -19,6 +19,7 @@ class sc_Dataset(Dataset):
                 celltype_key: str = "cell_type",
                 preprocessing_key: str = None,
                 prep_Y: bool = False,
+                save_prep: bool = False,
                 **kwargs
                 ):
         """
@@ -32,6 +33,9 @@ class sc_Dataset(Dataset):
         counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
         self.processor = preprocessor(key = preprocessing_key)
         counts = self.processor(counts, **kwargs)
+        if save_prep:
+            np.save("x_selected_features_.npy", data.var.index.to_numpy())
+            np.save("x_components_.npy", self.processor.svd.components_)
         # print("components_", self.processor.svd.components_.shape) # [#PCs, Features to use]
         try:
             self.chrom_len_dict, self.chrom_idx_dict = get_chrom_dicts(data)
@@ -71,7 +75,9 @@ class sc_Dataset(Dataset):
         counts_Y = data_Y.X.toarray() if scipy.sparse.issparse(data_Y.X) else data_Y.X # dense
         self.n_feature_Y = counts_Y.shape[1] # init n_output 
         if prep_Y:
-            counts_Y_reduced = self.processor(counts_Y, **kwargs)  
+            counts_Y_reduced = self.processor(counts_Y, **kwargs)
+            if save_prep:
+                np.save("y_components_.npy", self.processor.svd.components_)
             self.n_feature_Y = counts_Y_reduced.shape[1]     
         self.Y = torch.Tensor(counts_Y)
         self.var_names_Y = data_Y.var_names.to_numpy() # Y feature names
