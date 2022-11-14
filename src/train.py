@@ -16,8 +16,9 @@ def train(args):
             data_path_Y = os.path.join(args.data_dir, "cite_train_y.h5ad"),
             time_key = "day",
             celltype_key = "cell_type",
+            preprocessing_key = args.prep,
             )
-    train_set, val_set = load_data(dataset)
+    train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 
     # init model
     model = multimodal_AE(n_input = dataset.n_feature_X, 
@@ -142,19 +143,20 @@ def train(args):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-D", "--data_dir", type=str, required=True)
+    parser.add_argument("-d", "--data_dir", type=str, required=True)
     parser.add_argument("--log_dir", type=str, required=True)
-    parser.add_argument("-L", "--loss_ae", type=str, default="multitask")
-    parser.add_argument("-O", "--optimizer", type=str, default="SGD")
+    parser.add_argument("-p", "--prep", type=str, default=None)
+    parser.add_argument("-l", "--loss_ae", type=str, default="multitask")
+    parser.add_argument("-o", "--optimizer", type=str, default="SGD")
     parser.add_argument("-lr1", "--learning_rate1", type=float, default=7.5e-2)
     parser.add_argument("-lr2", "--learning_rate2", type=float, default=2.4e-3)
     # parser.add_argument('--schedule_lr', action = "store_true")
-    parser.add_argument("-N", "--n_epochs", type=int, default=30)
-    parser.add_argument("-B", "--batch_size", type=int, default=256)
+    parser.add_argument("-n", "--n_epochs", type=int, default=30)
+    parser.add_argument("-b", "--batch_size", type=int, default=256)
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")
 
     args = parser.parse_args()
     torch.manual_seed(6215) # TODO
     train(args)
-    # python -m src.train --data_dir toy_data --log_dir logdir -N 100 -v
+    # python -m src.train --data_dir toy_data --log_dir logdir -n 100 -v

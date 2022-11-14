@@ -16,8 +16,10 @@ hyperparams = {
 "seed": tune.randint(0, 10000),
 "optimizer": tune.choice(["Adam", "SGD"]),
 "weight_decay": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
-"hparams_dict": {"latent_dim": tune.choice([64, 32]), 
-                 "autoencoder_width": tune.choice([[512, 128], [256]]),
+"dropout": tune.choice([0, 0.05, 0.1, 0.2]),
+"batch_norm": tune.choice([True, False]),
+"hparams_dict": {"latent_dim": tune.choice([512, 280]), 
+                 "autoencoder_width": tune.choice([[512, 512], [1024, 512]]),
                  "alpha": tune.quniform(0, 3, 0.1)
                 }
                }
@@ -37,6 +39,8 @@ def train(config):
                           n_output= dataset.n_feature_Y,
                           loss_ae = "multitask",
                           hparams_dict = config["hparams_dict"], # set alpha
+                          batch_norm = config["batch_norm"],
+                          dropout = config["dropout"],
                           )
     
     # optimizer

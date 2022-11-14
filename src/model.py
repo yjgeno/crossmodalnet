@@ -7,7 +7,7 @@ class MLP(torch.nn.Module):
     """
     A multilayer perceptron class.
     """
-    def __init__(self, sizes, batch_norm=True):
+    def __init__(self, sizes, batch_norm=True, dropout=0.):
         super(MLP, self).__init__()
         layers = []
         for s in range(len(sizes) - 1):
@@ -17,8 +17,9 @@ class MLP(torch.nn.Module):
                 if batch_norm and s < len(sizes) - 2
                 else None,
                 torch.nn.ReLU(),
+                torch.nn.Dropout(p = dropout)
             ]
-        layers = [l for l in layers if l is not None][:-1]
+        layers = [l for l in layers if l is not None][:-2]
         self.network = torch.nn.Sequential(*layers)
 
     def forward(self, x):
@@ -36,6 +37,7 @@ class multimodal_AE(torch.nn.Module):
         loss_ae: str = "multitask",
         hparams_dict: dict = None,
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        **kwargs
     ):
         super(multimodal_AE, self).__init__()
         self.n_input = n_input 
@@ -51,13 +53,15 @@ class multimodal_AE(torch.nn.Module):
             [n_input]
             + self.hparams["autoencoder_width"]
             + [self.hparams["latent_dim"]]
+            + [n_output],
+            **kwargs
         )
 
-        self.decoder = MLP(
-            [self.hparams["latent_dim"]]
-            # + self.hparams["autoencoder_width"]
-            + [n_output] # *2
-        )
+        # self.decoder = MLP(
+        #     [self.hparams["latent_dim"]]
+        #     # + self.hparams["autoencoder_width"]
+        #     + [n_output] # *2
+        # )
 
         # AE loss
         if self.loss_ae == "multitask":
@@ -76,8 +80,8 @@ class multimodal_AE(torch.nn.Module):
 
     def set_hparams(self, hparams_dict: dict = None):
         self._hparams = {
-            "latent_dim": 32,
-            "autoencoder_width": [512, 128],
+            "latent_dim": 512,
+            "autoencoder_width": [512, 512],
             "alpha": 0.5,
         }  # set default
         if hparams_dict is not None: 
@@ -87,18 +91,12 @@ class multimodal_AE(torch.nn.Module):
                 except KeyError:
                     continue
 
-
     @property
     def hparams(self):
         """
         Returns a list of the hyper-parameters.
         """
         return self._hparams
-
-
-    # @hparams.setter
-    # def hparams(self, hparams_dict: dict):
-    #     self._hparams = hparams_dict
 
     def move_inputs_(self, *args):
         """
@@ -107,19 +105,12 @@ class multimodal_AE(torch.nn.Module):
         return [x.to(self.device) for x in args]
 
 
-    def forward(
-        self,
-        X,
-        return_latent:bool = False,
-    ):
+    def forward(self, X):
         """
         Predict Y given X.
         """
-        latent_basal = self.encoder(X)
-        reconstructions = self.decoder(latent_basal)
-
-        if return_latent:
-            return reconstructions, latent_basal
+        reconstructions = self.encoder(X)
+        # reconstructions = self.decoder(latent_basal)
         return reconstructions
 
 
