@@ -50,7 +50,7 @@ def train(args):
         for sample in train_set:
             X_exp, day, celltype, Y_exp = sample
             X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)   
-            pred_Y_exp = model(X_exp)
+            pred_Y_exp = model(X_exp, day)
             loss_1 = model.weight_params[0] * model.loss_fn_1(pred_Y_exp, Y_exp) # normalized weight*loss
             loss_2 = model.weight_params[1] * model.loss_fn_2(pred_Y_exp, Y_exp)
             if global_step == 0:
@@ -83,8 +83,8 @@ def train(args):
             inv_rate_2 = torch.div(lhat_2, lhat_avg)
             
             # calculate the constant target 
-            C1 = G_avg*(inv_rate_1)**model.hparams["alpha"]
-            C2 = G_avg*(inv_rate_2)**model.hparams["alpha"]
+            C1 = G_avg*(inv_rate_1)**model.alpha
+            C2 = G_avg*(inv_rate_2)**model.alpha
             C1 = C1.detach().squeeze() # tensor of []
             C2 = C2.detach().squeeze()
 
@@ -127,7 +127,7 @@ def train(args):
             for sample in val_set:
                 X_exp, day, celltype, Y_exp = sample
                 X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)
-                pred_Y_exp = model(X_exp)
+                pred_Y_exp = model(X_exp, day)
                 corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())
             train_logger.add_scalars("corr_info", 
                                     {"corr_train": corr_sum_train/len(train_set),

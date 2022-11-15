@@ -76,7 +76,7 @@ class sc_Dataset(Dataset):
         """
         return a tuple X, Y
         """
-        return self.X[idx], self.day[idx], self.celltype_dict[self.celltype[idx]], self.Y[idx] # tuple
+        return self.X[idx], self.day_dict[self.day[idx]], self.celltype_dict[self.celltype[idx]], self.Y[idx] # tuple
 
 
 def load_data(dataset: sc_Dataset,
