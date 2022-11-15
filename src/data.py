@@ -15,6 +15,7 @@ class sc_Dataset(Dataset):
                 time_key: str = "day",
                 celltype_key: str = "cell_type",
                 preprocessing_key: str = None,
+                save_prep: bool = False,
                 **kwargs
                 ):
         """
@@ -24,11 +25,13 @@ class sc_Dataset(Dataset):
         """
         # process X
         data = sc.read_h5ad(data_path_X)
-        # sc.pp.filter_genes(data, min_cells = 0) # filter feature
+        sc.pp.filter_genes(data, min_cells = 5) # filter feature
         print(f"Features to use: {data.shape[1]}")
         counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
         self.processor = preprocessor(key = preprocessing_key)
         counts = self.processor(counts, **kwargs)
+        if save_prep:
+            np.save("x_selected_features_.npy", data.var.index.to_numpy())
         # print("components_", self.processor.svd.components_.shape) # [#PCs, Features to use]
         self.X = torch.Tensor(counts)
         self.var_names_X = data.var_names.to_numpy() # X feature names

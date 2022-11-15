@@ -17,6 +17,7 @@ def train(args):
             time_key = "day",
             celltype_key = "cell_type",
             preprocessing_key = args.prep,
+            save_prep = args.save,
             )
     train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 
@@ -159,4 +160,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     torch.manual_seed(6215) # TODO
     train(args)
-    # python -m src.train --data_dir toy_data --log_dir logdir -n 100 -v
+    # python -m src.train --data_dir toy_data --log_dir logdir -n 100 -p standard_1 -v
