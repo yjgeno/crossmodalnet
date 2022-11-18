@@ -39,7 +39,7 @@ class sc_Dataset(Dataset):
 
         # process meta data
         self.day = data.obs[time_key].to_numpy()
-        self.unique_day = np.unique(data.obs[time_key].values)
+        self.unique_day = np.sort(np.unique(data.obs[time_key].values)) # [2,3,4,7]
         self.celltype = data.obs[celltype_key].to_numpy()
         self.unique_celltype = np.unique(data.obs[celltype_key].values)
         encoder_day = OneHotEncoder(sparse=False)
@@ -50,7 +50,7 @@ class sc_Dataset(Dataset):
                     self.unique_day,
                     torch.Tensor(encoder_day.transform(self.unique_day.reshape(-1, 1))),
                 )
-            )     
+            )    
         encoder_celltype = OneHotEncoder(sparse=False)
         encoder_celltype.fit(self.unique_celltype.reshape(-1, 1))  # (# celltype, 1)
         # self.encoder_celltype = encoder_celltype
