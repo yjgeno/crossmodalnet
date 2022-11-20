@@ -31,7 +31,9 @@ class sc_Dataset(Dataset):
         self.processor = preprocessor(key = preprocessing_key)
         counts = self.processor(counts, **kwargs)
         if save_prep:
-            np.save("x_selected_features_.npy", data.var.index.to_numpy())
+            import os
+            np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "x_selected_features_.npy"), 
+                    data.var.index.to_numpy())
         # print("components_", self.processor.svd.components_.shape) # [#PCs, Features to use]
         self.X = torch.Tensor(counts)
         self.var_names_X = data.var_names.to_numpy() # X feature names

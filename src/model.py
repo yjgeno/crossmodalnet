@@ -1,4 +1,4 @@
-
+import os
 import torch
 import torch.nn as nn
 from .loss import NCorrLoss
@@ -38,6 +38,7 @@ class CrossmodalNet(nn.Module):
         n_output: int,
         time_p: list,
         hparams_dict: dict = None,
+        patience: int = 5,
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         **kwargs
     ):
@@ -46,6 +47,8 @@ class CrossmodalNet(nn.Module):
         self.n_output = n_output # dim
         self.device = device
         self.set_hparams(hparams_dict=hparams_dict) # self.hparams
+        self.best_score = 1e-3
+        self.patience = patience # lower than current best_score
 
         # AE
         layers = [
@@ -145,6 +148,15 @@ class CrossmodalNet(nn.Module):
             return reconstructions, latent_base
         return reconstructions
 
+    def early_stopping(self, score):
+        if score > self.best_score:
+            self.best_score = score
+            self.patience_trials = 0
+        else:
+            self.patience_trials += 1
+
+        return self.patience_trials >= self.patience
+
 
 # class TimeEncoding(nn.Module):
 #     def __init__(self, n_out=512):
@@ -178,14 +190,24 @@ class CrossmodalNet(nn.Module):
 
 def save_model(model, name: str = "CrossmodalNet"):
     from torch import save
-    import os
     if isinstance(model, CrossmodalNet):
         return save(model.state_dict(), os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{name}.th'))
     raise ValueError("model type '%s' not supported!" % str(type(model)))
-
 
 def load_model(path, **kwargs): # num_genes, num_drugs, loss_ae
     from torch import load
     r = CrossmodalNet(**kwargs)
     r.load_state_dict(load(path, map_location='cpu'))
     return r
+
+def save_hparams(model, name: str = "hparams"):
+    import json
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{name}.json"), "w") as f:
+        json.dump(model.hparams, f)
+
+def load_hparams(path, **kwargs):
+    import json
+    with open(path, "r") as f:
+        hparams_dict = json.load(f, **kwargs)
+    return hparams_dict
+

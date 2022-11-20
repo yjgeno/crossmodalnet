@@ -2,7 +2,7 @@ import torch
 import os
 import torch.utils.tensorboard as tb
 from .data import sc_Dataset, load_data
-from .model import CrossmodalNet, save_model, load_model
+from .model import CrossmodalNet, save_model, save_hparams, load_hparams
 from .utils import corr_score
 
 
@@ -22,11 +22,16 @@ def train(args):
     train_set, val_set = load_data(dataset, batch_size = args.batch_size)
 
     # init model
+    hparams_load = None
+    if args.hparams_path is not None:
+        hparams_load = load_hparams(os.path.join("hparams", args.hparams_path))
     model = CrossmodalNet(n_input = dataset.n_feature_X, 
                           n_output= dataset.n_feature_Y,
                           time_p = dataset.unique_day,
+                          hparams_dict = hparams_load,
                           )
     print(model)
+    print("hparams:", model.hparams)
 
     # optimizer
     if args.optimizer == "Adam":
@@ -144,7 +149,7 @@ def train(args):
                                 }, global_step)
         if args.verbose:
             print("(Train) epoch: {:03d}, global_step: {:d}, loss: {:.4f}, loss_adv: {:.4f}, corr: {:.4f}".format(
-                epoch, global_step, loss_sum/local_step_ae, loss_adv_sum/local_step_adv, corr_sum_train/local_step_ae))
+                epoch, global_step, loss_sum/local_step_ae, loss_adv_sum/local_step_adv if local_step_adv>0 else 0., corr_sum_train/local_step_ae))
 
         model.eval()
         with torch.no_grad():
@@ -161,8 +166,15 @@ def train(args):
             if args.verbose:
                 print("(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(epoch, global_step, corr_sum_val/len(val_set)))
 
+        stop = model.early_stopping(corr_sum_val/len(val_set))
+        if stop:
+            print(f"early_stop: {epoch}")
+            break
+
     if args.save:
         save_model(model)
+        save_hparams(model)
+        print("Saved model and hparams")
 
 
 if __name__ == "__main__":
@@ -175,11 +187,12 @@ if __name__ == "__main__":
     # parser.add_argument('--schedule_lr', action = "store_true")
     parser.add_argument("-n", "--n_epochs", type=int, default=30)
     parser.add_argument("-b", "--batch_size", type=int, default=256)
+    parser.add_argument("-hp", "--hparams_path", type=str, default=None)
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")
 
     args = parser.parse_args()
     print(args)
-    torch.manual_seed(6215) # TODO
+    torch.manual_seed(3559) # TODO
     train(args)
     # python -m src.train --data_dir toy_data --log_dir logdir -n 100 -p standard_1 -v
