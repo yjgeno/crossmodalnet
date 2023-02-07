@@ -26,7 +26,7 @@ hyperparams = {
                 "adv_lr": tune.qloguniform(1e-4, 1e-1, 5e-5),
                 "ae_wd": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
                 "adv_wd": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
-                "adv_step": tune.choice([3, 5, 10]),
+                "adv_step": tune.choice([3, 5]),
                 "alpha": tune.quniform(0, 3, 0.1),
                 }
                }
@@ -39,7 +39,7 @@ def train(config):
             data_path_X = os.path.join(DIR, "cite_train_x.h5ad"), # HARD coded only for tune
             data_path_Y = os.path.join(DIR, "cite_train_y.h5ad"),
             time_key = "day",
-            celltype_key = "cell_type",
+            # celltype_key = "cell_type",
             )
     train_set, val_set = load_data(dataset)  
     model = CrossmodalNet(n_input = dataset.n_feature_X, 
@@ -63,8 +63,8 @@ def train(config):
         local_step_ae, local_step_adv = 0, 0
         loss_sum, loss_1_sum, loss_2_sum, loss_adv_sum, adv_penalty_sum, corr_sum_train = [0.]*6
         for sample in train_set:        
-            X_exp, day, celltype, Y_exp = sample
-            X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)   
+            X_exp, day, Y_exp = sample
+            X_exp, day, Y_exp = model.move_inputs_(X_exp, day, Y_exp)   
             pred_Y_exp, latent_base = model(X_exp, day, return_latent=True)
             # adv pred
             adv_time_pred = model.adv_mlp(latent_base)
@@ -125,8 +125,8 @@ def train(config):
         with torch.no_grad():
             corr_sum_val = 0.
             for sample in val_set:
-                X_exp, day, celltype, Y_exp = sample
-                X_exp, day, celltype, Y_exp = model.move_inputs_(X_exp, day, celltype, Y_exp)
+                X_exp, day, Y_exp = sample
+                X_exp, day, Y_exp = model.move_inputs_(X_exp, day, Y_exp)
                 pred_Y_exp = model(X_exp, day)
                 corr_sum_val += corr_score(Y_exp.detach().cpu().numpy(), pred_Y_exp.detach().cpu().numpy())     
 
@@ -147,7 +147,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, default=50)
-    parser.add_argument("--to_file", type=str, default="raytune_results", help="save final tuning results")
     parser.add_argument("--test", action="store_true", help="quick testing")
     args = parser.parse_args()
     
@@ -176,7 +175,7 @@ if __name__ == "__main__":
     )
     results = tuner.fit()
     print("Best config is:", results.get_best_result().config)
-    save_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), f"{args.to_file}.csv")
-    results.get_dataframe().to_csv(save_path)
+    # save_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+    results.get_dataframe().to_csv("raytune_results.csv")
     # python -m src.tune --test
 

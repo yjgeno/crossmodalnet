@@ -49,6 +49,20 @@ def check_training_data(ada_X: AnnData, ada_Y: AnnData):
     #     raise ValueError("")
 
 
+def split_data(adata, split=0.15, cell_id_test=None, random_state=0, time_key="day"):
+    """
+    Split data into train/val and test.
+    """
+    if cell_id_test is None:
+        np.random.seed(random_state)
+        df = adata.obs.groupby(time_key).apply(lambda x: x.sample(int(split*len(x)))) #.set_index("cell_id")
+        cell_id_test = [i[1] for i in df.index.to_numpy()]
+        np.savetxt("cell_id_test.txt", cell_id_test, delimiter="\t", fmt="%s") 
+    adata_test = adata[adata.obs.index.isin(cell_id_test), :].copy()
+    adata_train = adata[~adata.obs.index.isin(cell_id_test), :].copy()
+    return adata_train, adata_test
+
+
 def corr_score(y_true, y_pred):
     """
     Returns the average of each sample's Pearson correlation coefficient.

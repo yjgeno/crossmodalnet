@@ -13,7 +13,7 @@ class sc_Dataset(Dataset):
                 data_path_X, 
                 data_path_Y,
                 time_key: str = "day",
-                celltype_key: str = "cell_type",
+                # celltype_key: str = "cell_type",
                 preprocessing_key: str = None,
                 save_prep: bool = False,
                 **kwargs
@@ -42,8 +42,8 @@ class sc_Dataset(Dataset):
         # process meta data
         self.day = data.obs[time_key].to_numpy()
         self.unique_day = np.sort(np.unique(data.obs[time_key].values)) # [2,3,4,7]
-        self.celltype = data.obs[celltype_key].to_numpy()
-        self.unique_celltype = np.unique(data.obs[celltype_key].values)
+        # self.celltype = data.obs[celltype_key].to_numpy()
+        # self.unique_celltype = np.unique(data.obs[celltype_key].values)
         encoder_day = OneHotEncoder(sparse=False)
         encoder_day.fit(self.unique_day.reshape(-1, 1))  # (# day, 1)
         # self.encoder_day = encoder_day
@@ -53,15 +53,15 @@ class sc_Dataset(Dataset):
                     torch.Tensor(encoder_day.transform(self.unique_day.reshape(-1, 1))),
                 )
             )    
-        encoder_celltype = OneHotEncoder(sparse=False)
-        encoder_celltype.fit(self.unique_celltype.reshape(-1, 1))  # (# celltype, 1)
-        # self.encoder_celltype = encoder_celltype
-        self.celltype_dict = dict(
-                zip(
-                    self.unique_celltype,
-                    torch.Tensor(encoder_celltype.transform(self.unique_celltype.reshape(-1, 1))),
-                )
-            )
+        # encoder_celltype = OneHotEncoder(sparse=False)
+        # encoder_celltype.fit(self.unique_celltype.reshape(-1, 1))  # (# celltype, 1)
+        # # self.encoder_celltype = encoder_celltype
+        # self.celltype_dict = dict(
+        #         zip(
+        #             self.unique_celltype,
+        #             torch.Tensor(encoder_celltype.transform(self.unique_celltype.reshape(-1, 1))),
+        #         )
+        #     )
 
         # process Y
         data_Y = sc.read_h5ad(data_path_Y)
@@ -78,11 +78,11 @@ class sc_Dataset(Dataset):
         """
         return a tuple X, Y
         """
-        return self.X[idx], self.day_dict[self.day[idx]], self.celltype_dict[self.celltype[idx]], self.Y[idx] # tuple
+        return self.X[idx], self.day_dict[self.day[idx]], self.Y[idx] # tuple
 
 
 def load_data(dataset: sc_Dataset,
-              split: float = 0.15, # train/val
+              split: float = 0.05, # train/val
               batch_size: int = 256, 
               shuffle: bool = True, 
               random_state: int = 0,

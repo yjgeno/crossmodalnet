@@ -38,17 +38,14 @@ class CrossmodalNet(nn.Module):
         n_output: int,
         time_p: list,
         hparams_dict: dict = None,
-        patience: int = 5,
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         **kwargs
     ):
         super(CrossmodalNet, self).__init__()
         self.n_input = n_input 
         self.n_output = n_output # dim
-        self.device = device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.set_hparams(hparams_dict=hparams_dict) # self.hparams
         self.best_score = 1e-3
-        self.patience = patience # lower than current best_score
 
         # AE
         layers = [
@@ -106,6 +103,7 @@ class CrossmodalNet(nn.Module):
             "adv_wd": 4e-7,
             "adv_step": 3,
             "alpha": 0.5,
+            "patience": 10,
         }
         if hparams_dict is not None:
             for key in hparams_dict:
@@ -155,7 +153,7 @@ class CrossmodalNet(nn.Module):
         else:
             self.patience_trials += 1
 
-        return self.patience_trials >= self.patience
+        return self.patience_trials >= self.hparams["patience"]
 
 
 # class TimeEncoding(nn.Module):
