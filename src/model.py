@@ -46,6 +46,7 @@ class CrossmodalNet(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.set_hparams(hparams_dict=hparams_dict) # self.hparams
         self.best_score = 1e-3
+        self.patience_trials = 0
 
         # AE
         layers = [

@@ -26,7 +26,7 @@ hyperparams = {
                 "adv_lr": tune.qloguniform(1e-4, 1e-1, 5e-5),
                 "ae_wd": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
                 "adv_wd": tune.sample_from(lambda _: np.random.randint(1, 10)*(0.1**np.random.randint(3, 7))),
-                "adv_step": tune.choice([3, 5]),
+                "adv_step": tune.choice([3, 5, 10]),
                 "alpha": tune.quniform(0, 3, 0.1),
                 }
                }

@@ -12,8 +12,8 @@ def train(args):
     """
     # load data
     dataset = sc_Dataset(
-            data_path_X = os.path.join(args.data_dir, "cite_train_x.h5ad"),
-            data_path_Y = os.path.join(args.data_dir, "cite_train_y.h5ad"),
+            data_path_X = os.path.join(args.data_dir, "cite_touse", "cite_train_x.h5ad"),
+            data_path_Y = os.path.join(args.data_dir, "cite_touse", "cite_train_y_norm.h5ad"),
             time_key = "day",
             # celltype_key = "cell_type",
             preprocessing_key = args.prep,
@@ -195,4 +195,4 @@ if __name__ == "__main__":
     print(args)
     torch.manual_seed(3559) # TODO
     train(args)
-    # python -m src.train --data_dir toy_data --log_dir logdir -n 100 -p standard_1 -v
+    # python -m src.train --data_dir toy_data --log_dir logdir -hp params0.json -n 100 -v

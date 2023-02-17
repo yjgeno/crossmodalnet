@@ -1,10 +1,32 @@
 import numpy as np
 from anndata import AnnData 
+import scanpy as sc
 from sklearn.preprocessing import StandardScaler
 from sklearn import decomposition
+import warnings
 
 
-class preprocessor:
+def sc_preprocess(adata: AnnData, 
+                  normalize = True, 
+                  log = True,
+                  pseudocount = 1,
+                  scale = True, 
+                  **kwargs
+                  ):
+    # adata.X.A = np.clip(adata.X.A, 0, 100)
+    if normalize:
+        sc.pp.normalize_total(adata, target_sum = 1e4, **kwargs)
+        print("Cell-wise normalize AnnData")
+    if log:
+        # sc.pp.log1p(adata, **kwargs)
+        adata.X.A = np.log(adata.X.A + pseudocount)
+        print("Logarithmize AnnData")
+    if scale:
+        sc.pp.scale(adata, **kwargs)
+        print("Center features of AnnData")
+
+
+class pretransformer:
     def __init__(self, key = None):
         self.key = key
                 
@@ -39,7 +61,7 @@ class preprocessor:
             self.tfidf = TfidfTransformer()
             counts = self.tfidf.fit_transform(counts).toarray()
         
-        print(f"Complete preprocessing by {self.key}")
+        print(f"Transform counts by {self.key}")
         return counts
 
 
@@ -67,6 +89,8 @@ def corr_score(y_true, y_pred):
     """
     Returns the average of each sample's Pearson correlation coefficient.
     """
+    if np.std(y_true)==0 or np.std(y_pred)==0 :
+        warnings.warn("Standard deviation equals to zero")
     corrsum = 0
     for i in range(len(y_true)): # aggregate samples in a batch
         corrsum += np.corrcoef(y_true[i], y_pred[i])[1, 0]

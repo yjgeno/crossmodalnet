@@ -4,11 +4,13 @@ import scanpy as sc
 import scipy
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
-from .utils import check_training_data, preprocessor
+from .utils import check_training_data, sc_preprocess, pretransformer
 
 
 class sc_Dataset(Dataset):
-
+    """
+    Dataset object.
+    """
     def __init__(self, 
                 data_path_X, 
                 data_path_Y,
@@ -19,21 +21,30 @@ class sc_Dataset(Dataset):
                 **kwargs
                 ):
         """
-
         Args:
             data_path: Path to .h5ad file.
         """
-        # process X
+        # load X, Y
         data = sc.read_h5ad(data_path_X)
-        sc.pp.filter_genes(data, min_cells = 5) # filter feature
-        print(f"Features to use: {data.shape[1]}")
+        data_Y = sc.read_h5ad(data_path_Y)  
+        sc.pp.filter_genes(data, min_cells = 5) # filter feature in X
+        # sc.pp.filter_cells(data_Y, min_genes = 20) # filter cell in Y
+        # sc.pp.filter_cells(data, min_genes = 200) # filter cell in X
+        # data_Y = data_Y[data.obs.index, :].copy()
+        data = data[data_Y.obs.index, :].copy()
+        check_training_data(data, data_Y)
+        # process X
+        # TODO
+        # sc_preprocess(data, scale=False, **kwargs)
+        print(f"X to use: {data.shape}")
         counts = data.X.toarray() if scipy.sparse.issparse(data.X) else data.X # dense
-        self.processor = preprocessor(key = preprocessing_key)
+        self.processor = pretransformer(key = preprocessing_key)
         counts = self.processor(counts, **kwargs)
         if save_prep:
             import os
             np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "x_selected_features_.npy"), 
                     data.var.index.to_numpy())
+            print("Saved preprocessed features")
         # print("components_", self.processor.svd.components_.shape) # [#PCs, Features to use]
         self.X = torch.Tensor(counts)
         self.var_names_X = data.var_names.to_numpy() # X feature names
@@ -64,9 +75,10 @@ class sc_Dataset(Dataset):
         #     )
 
         # process Y
-        data_Y = sc.read_h5ad(data_path_Y)
-        check_training_data(data, data_Y)
+        # TODO
+        # sc_preprocess(data_Y, normalize=False, pseudocount=10, scale=False, **kwargs)
         counts_Y = data_Y.X.toarray() if scipy.sparse.issparse(data_Y.X) else data_Y.X # dense
+        print(f"Y to use: {data_Y.shape}")
         self.n_feature_Y = counts_Y.shape[1] # init n_output 
         self.Y = torch.Tensor(counts_Y)
         self.var_names_Y = data_Y.var_names.to_numpy() # Y feature names
