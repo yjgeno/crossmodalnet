@@ -130,4 +130,10 @@ dmypy.json
 
 # custom
 logger/
+data/
+toy_data/
+models/
+nb/
+preds/
+hparams/
 *.h5ad

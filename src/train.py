@@ -12,9 +12,11 @@ def train(args):
     """
     # load data
     dataset = sc_Dataset(
-            data_path_X = os.path.join(args.data_dir, "cite_touse", "cite_train_x.h5ad"),
-            data_path_Y = os.path.join(args.data_dir, "cite_touse", "cite_train_y_norm.h5ad"),
-            time_key = "day",
+            # data_path_X = os.path.join(args.data_dir, "cite_touse", "cite_train_x_filter.h5ad"), # data1
+            # data_path_Y = os.path.join(args.data_dir, "cite_touse", "cite_train_y_norm.h5ad"),
+            data_path_X = os.path.join(args.data_dir, "cite_touse2", "cite_train_x.h5ad"), # data2
+            data_path_Y = os.path.join(args.data_dir, "cite_touse2", "cite_train_y_norm.h5ad"),
+            time_key = args.tkey,
             # celltype_key = "cell_type",
             preprocessing_key = args.prep,
             save_prep = args.save,
@@ -188,6 +190,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--n_epochs", type=int, default=30)
     parser.add_argument("-b", "--batch_size", type=int, default=256)
     parser.add_argument("-hp", "--hparams_path", type=str, default=None)
+    parser.add_argument("--tkey", type=str, default="day")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--save", action="store_true")
 
