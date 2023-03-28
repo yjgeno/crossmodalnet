@@ -83,5 +83,5 @@ class NCorrLoss(Loss_):
         # # to confirm corr calculation:
         # z = torch.cat([pred_y, y], dim=0)
         # r = torch.corrcoef(z)[:pred_y.shape[0], pred_y.shape[0]:].diagonal().mean() # off-diagnoal corr
-        loss = (-torch.log(r))**0.15
+        loss = -torch.log(r)
         return loss 
