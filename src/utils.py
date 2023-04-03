@@ -8,8 +8,11 @@ import torch
 from sklearn.preprocessing import StandardScaler
 from sklearn import decomposition
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
+from mycolorpy import colorlist as mcp
 import warnings
 
+COLORS = mcp.gen_color(cmap="tab10", n=10)
 
 def sc_preprocess(adata: AnnData, 
                   normalize = True, 
@@ -170,7 +173,7 @@ class saliency:
     
     def get_top_genes(self, 
                       k: int = 100, 
-                      TF: bool = False,
+                      include_TF: bool = False,
                       ):
         self.top_genes, self.top_TFs = None, None
         try:
@@ -179,7 +182,7 @@ class saliency:
             print("Compute saliency mean first")
         self.top_genes = np.array(self.genes)[self.idx_j]
         print(f"Select top {k} genes by saliency")
-        if TF:
+        if include_TF:
             _, self.idx_j_TF = torch.topk(self.protein_j_saliency_mean[self.TF_intersect_idx], min(k, len(self.TF_intersect_idx)))
             self.top_TFs = self.TF_intersect[self.idx_j_TF]
             print(f"Select top {k} TFs by saliency")
@@ -195,13 +198,16 @@ class saliency:
             ax = plt.gca()
         ax.barh(np.arange(len(ys)), ys, xerr=yerrs, 
                align="center",
-               alpha=0.8,
+               alpha=0.6,
                error_kw=dict(ecolor='black', elinewidth=1, capsize=4),
                **kwargs)
         ax.set_xlabel("Saliency")
+        ax.set_xlim(0, ys.max()+1.3*yerrs.max())
+        # ax.set_xlim(0, 0.72)
+        ax.xaxis.set_major_formatter(FormatStrFormatter("%.2f"))
         ax.set_yticks(np.arange(len(ys)))
         ax.set_yticklabels(labels)
-        ax.invert_yaxis() # invert order
+        ax.invert_yaxis() # invert order in yaxis
         plt.tight_layout()
         # plt.savefig("saliency_bars.png")
         # plt.show()
@@ -212,14 +218,14 @@ class saliency:
                        **kwargs):
         ys, yerrs = self.protein_j_saliency_mean[self.idx_j][:topk].detach().numpy(), self.protein_j_saliency_std[self.idx_j][:topk].detach().numpy()
         labels = self.top_genes[:topk]
-        return self.plot_hbar_(ys, yerrs, labels, **kwargs)
+        return self.plot_hbar_(ys, yerrs, labels, color=COLORS, **kwargs)
 
     def plot_top_TFs(self, 
                      topk: int = 10,
                      **kwargs):
         ys, yerrs = self.protein_j_saliency_mean[self.TF_intersect_idx][self.idx_j_TF][:topk].detach().numpy(), self.protein_j_saliency_std[self.TF_intersect_idx][self.idx_j_TF][:topk].detach().numpy()
         labels = self.top_TFs[:topk]
-        return self.plot_hbar_(ys, yerrs, labels, **kwargs)
+        return self.plot_hbar_(ys, yerrs, labels, color=COLORS, **kwargs)
 
 
 
