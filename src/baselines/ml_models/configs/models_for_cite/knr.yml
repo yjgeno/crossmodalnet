@@ -1,24 +1,18 @@
 model: knr
-fs_name: skb
-fs_estimator: f
-ftr__k:
-  type: i
-  lo: 32
-  hi: 512
-regr__n_neighbors:
+n_neighbors:
   type: i
   lo: 3
   hi: 11
-regr__weights:
+weights:
   type: c
   choices:
     - uniform
     - distance
-regr__leaf_size:
+leaf_size:
   type: i
   lo: 10
   hi: 100
-regr__p:
+p:
   type: i
   lo: 1
   hi: 3

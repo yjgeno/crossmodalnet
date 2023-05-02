@@ -1,24 +1,18 @@
 model: rnr
-fs_name: skb
-fs_estimator: f
-ftr__k:
-  type: i
-  lo: 32
-  hi: 512
-regr__radius:
+radius:
   type: f
   lo: 0.8
   hi: 1.5
-regr__weights:
+weights:
   type: c
   choices:
     - uniform
     - distance
-regr__leaf_size:
+leaf_size:
   type: i
   lo: 2
   hi: 5000
-regr__p:
+p:
   type: i
   lo: 1
   hi: 5

@@ -1,0 +1,7 @@
+subsample_for_bin: 50000
+num_leaves: 10
+max_depth: 4
+reg_alpha: 24
+reg_lambda: 22
+subsample_freq: 70
+subsample: 0.504082

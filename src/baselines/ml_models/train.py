@@ -4,6 +4,7 @@ import scanpy as sc
 import pandas as pd
 import numpy as np
 import joblib
+from tqdm import tqdm
 
 from .regressions import *
 from .utils import *
@@ -102,16 +103,22 @@ def train(io_config,
                               use_cuml=use_gpu)
 
         # training
-        for y_ind in range(y_var_len):
-            cv_object.partial_cv(train_X, train_y[:, y_ind].toarray().ravel(),
-                                 y_ind, param_dist=model_config["param"], **cv_config)
-        cv_object.save_iters(output_dir / f"cv_result_{s}.csv")
+        (output_dir / f"models").mkdir(parents=True, exist_ok=True)
+        for y_ind in tqdm(range(y_var_len)):
+            model_file_px = "split_"
+            if (output_dir / f"models" / f"{model_file_px}{s}_best_model_{y_ind}.joblib").is_file():
+                cv_object.load_model(path=output_dir / f"models" / f"{model_file_px}{s}_best_model_{y_ind}.joblib",
+                                     index=y_ind)
+            else:
+                cv_object.partial_cv(train_X,
+                                     train_y[:, y_ind].toarray().ravel(),
+                                     y_ind,
+                                     param_dist=model_config["param"],
+                                     **cv_config)
 
-        if use_gpu:
-            (output_dir / f"models").mkdir(parents=True, exist_ok=True)
-            cv_object.save_model(output_dir / f"models")
-        else:
-            cv_object.save_model(output_dir / f"best_model_{s}.joblib")
+                cv_object.save_iters(output_dir, split=s, index=y_ind)
+                cv_object.save_model(output_dir / f"models", split=s, index=y_ind)
+
         cv_clfs.append(cv_object)
         del train_X
         del train_y
@@ -121,7 +128,7 @@ def train(io_config,
         test_X = np.load(f)
 
     for i, clf in enumerate(cv_clfs):
-        predicted_y = clf.predict(test_X[ftr_indexes[i], :])
+        predicted_y = clf.predict(test_X)
         pd.DataFrame(data=predicted_y).to_csv(output_dir / f"predicted_y_{i}.csv")
 
     del test_X

@@ -16,7 +16,7 @@ def parse_config(config, use_gpu) -> dict:
     params = {}
     print(config)
     for k, v in config.items():
-        if v["type"] == "c":
+        if isinstance(v, dict) and v["type"] == "c":
             params[f"{k}" if use_gpu else f"{k}"] = v["choices"]
         else:
             params[f"{k}" if use_gpu else f"{k}"] = dist[v["type"]](v["lo"], v["hi"])

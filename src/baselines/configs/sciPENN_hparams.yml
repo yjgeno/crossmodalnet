@@ -1,0 +1,10 @@
+quantiles:
+  - 0.1
+  - 0.25
+  - 0.75
+  - 0.9
+n_epochs: 200
+ES_max: 12
+decay_max: 6
+decay_step: 0.1
+lr: 0.001

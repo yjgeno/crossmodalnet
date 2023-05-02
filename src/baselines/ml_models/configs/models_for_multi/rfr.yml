@@ -1,29 +1,23 @@
 model: rfr
-fs_name: skb
-fs_estimator: f
-ftr__k:
-  type: i
-  lo: 32
-  hi: 512
-regr__n_estimators:
+n_estimators:
   type: i
   lo: 1000
   hi: 3000
-regr__criterion:
+split_criterion:
   type: c
   choices:
     - squared_error
     - absolute_error
     - poisson
-regr__max_depth:
+max_depth:
   type: i
   lo: 1
   hi: 50
-regr__min_samples_split:
+min_samples_split:
   type: i
   lo: 2
   hi: 5000
-regr__min_samples_leaf:
+min_samples_leaf:
   type: i
   lo: 2
   hi: 5000

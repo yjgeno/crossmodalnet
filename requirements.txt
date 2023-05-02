@@ -37,7 +37,8 @@ contourpy @ file:///D:/bld/contourpy_1662135241472/work
 cryptography @ file:///D:/bld/cryptography_1657174166005/work
 cvxopt==1.3.0
 cycler @ file:///home/conda/feedstock_root/build_artifacts/cycler_1635519461629/work
-dask @ file:///home/conda/feedstock_root/build_artifacts/dask-core_1664589610536/work
+dask
+distributed
 debugpy @ file:///D:/bld/debugpy_1660619197580/work
 decorator @ file:///home/conda/feedstock_root/build_artifacts/decorator_1641555617451/work
 defusedxml==0.7.1
@@ -85,6 +86,7 @@ jupyterlab-widgets @ file:///home/conda/feedstock_root/build_artifacts/jupyterla
 kiwisolver @ file:///D:/bld/kiwisolver_1657953200729/work
 legacy-api-wrap==1.2
 leidenalg==0.8.10
+lightgbm
 llvmlite==0.39.1
 locket @ file:///home/conda/feedstock_root/build_artifacts/locket_1650660393415/work
 loompy==3.0.7
