@@ -1,0 +1,18 @@
+model: rnr
+radius:
+  type: f
+  lo: 0.8
+  hi: 1.5
+weights:
+  type: c
+  choices:
+    - uniform
+    - distance
+leaf_size:
+  type: i
+  lo: 2
+  hi: 5000
+p:
+  type: i
+  lo: 1
+  hi: 5

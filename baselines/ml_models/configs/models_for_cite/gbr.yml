@@ -1,0 +1,52 @@
+model: gbr
+loss:
+  type: c
+  choices:
+    - squared_error
+    - absolute_error
+    - huber
+    - quantile
+learning_rate:
+  type: l
+  lo: 1.0E-8
+  hi: 1.0E-1
+n_estimators:
+  type: i
+  lo: 100
+  hi: 1000
+subsample:
+  type: f
+  lo: 0.01
+  hi: 0.1
+criterion:
+  type: c
+  choices:
+    - squared_error
+    - friedman_mse
+    - squared_error
+min_samples_split:
+  type: i
+  lo: 10
+  hi: 5000
+min_samples_leaf:
+  type: i
+  lo: 10
+  hi: 5000
+max_depth:
+  type: i
+  lo: 1
+  hi: 10
+max_features:
+  type: c
+  choices:
+    - auto
+    - log2
+    - sqrt
+alpha:
+  type: f
+  lo: 0.1
+  hi: 1.0
+random_state:
+  type: c
+  choices:
+    - 1

@@ -1,0 +1,11 @@
+activation: Sigmoid
+bs: 2048
+dropout_rate: 0.4850924458
+hidden_dims:
+  - 1024
+  - 512
+  - 216
+optim: AdamW
+use_batchnorm: true
+use_layernorm: false
+weight_decay: 0.03903213783

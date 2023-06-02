@@ -1,0 +1,5 @@
+n_cv: 4
+n_iter: 4
+verbose: 1
+n_jobs: 8
+scoring: r2

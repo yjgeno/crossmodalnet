@@ -1,0 +1,34 @@
+model: dtr
+max_depth:
+  type: i
+  lo: 1
+  hi: 50
+min_samples_split:
+  type: i
+  lo: 2
+  hi: 5000
+min_samples_leaf:
+  type: i
+  lo: 2
+  hi: 5000
+criterion:
+  type: c
+  choices:
+    - squared_error
+    - friedman_mse
+    - absolute_error
+    - poisson
+min_weight_fraction_leaf:
+  type: f
+  lo: 0.01
+  hi: 0.5
+max_features:
+  type: c
+  choices:
+    - auto
+    - log2
+    - sqrt
+max_leaf_nodes:
+  type: i
+  lo: 10
+  hi: 100

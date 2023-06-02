@@ -1,0 +1,21 @@
+model: rfr
+n_estimators:
+  type: i
+  lo: 1000
+  hi: 3000
+split_criterion:
+  type: i
+  lo: 0
+  hi: 6
+max_depth:
+  type: i
+  lo: 1
+  hi: 50
+min_samples_split:
+  type: i
+  lo: 2
+  hi: 5000
+min_samples_leaf:
+  type: i
+  lo: 2
+  hi: 5000

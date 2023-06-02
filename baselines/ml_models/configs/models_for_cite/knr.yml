@@ -1,0 +1,18 @@
+model: knr
+n_neighbors:
+  type: i
+  lo: 3
+  hi: 11
+weights:
+  type: c
+  choices:
+    - uniform
+    - distance
+leaf_size:
+  type: i
+  lo: 10
+  hi: 100
+p:
+  type: i
+  lo: 1
+  hi: 3

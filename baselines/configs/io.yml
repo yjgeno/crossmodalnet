@@ -1,0 +1,4 @@
+X_train_pth: /scratch/user/yjyang027/open-problems-multimodal/cite_train_x.h5ad
+y_train_pth: /scratch/user/yjyang027/open-problems-multimodal/cite_train_y.h5ad
+X_test_pth: /scratch/user/yjyang027/open-problems-multimodal/cite_test_x.h5ad
+y_test_pth: /scratch/user/yjyang027/open-problems-multimodal/cite_test_y.h5ad

@@ -1,0 +1,7 @@
+input_training_x: /content/drive/MyDrive/LAB_personal/multimodal/data/datasets/cite_train_x_hvg_3000.h5ad
+input_training_y: /content/drive/MyDrive/LAB_personal/multimodal/data/datasets/cite_to_use/cite_train_y_norm.h5ad
+input_test_x: /content/drive/MyDrive/LAB_personal/multimodal/data/datasets/cite_test_x_hvg_3000.h5ad
+input_preprocessor_x: /content/drive/MyDrive/LAB_personal/multimodal/results/cite/cite_preprocessor_x.pkl
+input_pps_training_x: /content/drive/MyDrive/LAB_personal/multimodal/results/cite/cite_train_x_preprocessed.npy
+input_pps_test_x: /content/drive/MyDrive/LAB_personal/multimodal/results/cite/cite_test_x_preprocessed.npy
+output_dir: /content/drive/MyDrive/LAB_personal/multimodal/results/cite/
