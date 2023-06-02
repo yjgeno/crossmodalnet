@@ -1,7 +1,6 @@
-# Multimodal_22
-Multimodal Single-Cell Data Integration 2022 <br>
-https://openproblems.bio/neurips_2022/ <br>
-https://www.kaggle.com/competitions/open-problems-multimodal
+# CrossmodalNet
+Interpretable modeling of time-resolved single-cell gene-protein expression <br>
+[Preprint](https://www.biorxiv.org/content/10.1101/2023.05.16.541011v2)
 
-NIPS 2021 Results <br>
-https://openproblems.bio/neurips_2021/
+(c) 2023 Yongjian Yang, Texas A&M University <br>
+The content of this repository is licensed under the MIT license.
