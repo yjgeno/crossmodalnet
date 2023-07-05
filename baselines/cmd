@@ -7,10 +7,16 @@ python3 -m src.ml_models.train -m sgd -p cite -n 1 -i multi_io_cfg -g
 python3 -m src.ml_models.train -m knr -p multi -n 1 -i multi_io_cfg -g
 python3 -m src.ml_models.train -m rfr -p multi -n 1 -i multi_io_cfg -g
 python3 -m src.ml_models.train -m ridge -p multi -n 1 -i multi_io_cfg -g
-python3 -m src.ml_models.train -m svr -p multi -n 1 -i multi_io_cfg -g
-python3 -m src.ml_models.train -m sgd -p multi -n 1 -i multi_io_cfg -g
+python3 -m ml_models.train -m svr -p multi -n 1 -i multi_io_cfg -g
+python3 -m ml_models.train -m sgd -p multi -n 1 -i multi_io_cfg -g
 
 
-python -m src.baselines.mlp.run -n -e -i test_io
-python -m src.baselines.ml_models.run -e -i test_io
-python -m src.baselines.sciPENN.run -e -i test_io
+python -m baselines.mlp.run -m -n -e -i test_io
+python -m baselines.ml_models.run -m -e -i test_io -n lgb
+python -m baselines.ml_models.run -m -e -i test_io -n lr
+python -m baselines.ml_models.run -m -e -i test_io -n ridge
+python -m baselines.sciPENN.run -m -e -i test_io
+python -m baselines.cTPnet.run -d -i cTPnet_io.yml
+
+python -m baselines.seurat.process -i test_io
+Rscript seurat_vi.R

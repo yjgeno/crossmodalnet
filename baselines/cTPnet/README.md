@@ -1,0 +1,2 @@
+This code is adpated from https://github.com/zhouzilu/cTPnet/blob/master/extdata/training_05152020.py
+Since cTPnet can only predict 24 proteins, we re-implemented the method and train a new model to predict expression of more proteins.
