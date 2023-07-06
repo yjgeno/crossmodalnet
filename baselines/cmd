@@ -16,6 +16,8 @@ python -m baselines.ml_models.run -m -e -i test_io -n lgb
 python -m baselines.ml_models.run -m -e -i test_io -n lr
 python -m baselines.ml_models.run -m -e -i test_io -n ridge
 python -m baselines.sciPENN.run -m -e -i test_io
+
+python -m pip install -e ../sctransfer
 python -m baselines.cTPnet.run -d -i cTPnet_io.yml
 
 python -m baselines.seurat.process -i test_io

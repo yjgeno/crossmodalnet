@@ -31,9 +31,14 @@ rownames(mtx) <- var[,1]
 
 saveRDS(mtx, file.path(output_folder, "tmp.rds"))
 file <- saverx(file.path(output_folder, "tmp.rds"), 
-            data.species = "Human", 
-            use.pretrain = T, 
-            pretrained.weights.file = file.path(input_folder, "human_Immune.hdf5"), 
-            model.species = "Human")
+               data.species = "Human", 
+               use.pretrain = T, 
+               pretrained.weights.file = file.path(input_folder, "human_Immune.hdf5"), 
+               model.species = "Human")
 denoised_result <- readRDS(file)
-write.csv(denoised_result$estimate, file = file.path(output_folder, "denoised_mtx.csv"))
+write.csv(rownames(denoised_result$estimate), 
+        file = file.path(output_folder, "denoised_var.csv"))
+write.csv(colnames(denoised_result$estimate), file = 
+        file.path(output_folder, "denoised_obs.csv"))
+writeMM(obj = Matrix(denoised_result$estimate, sparse = TRUE), 
+file = file.path(output_folder, "denoised_mtx.csv"))

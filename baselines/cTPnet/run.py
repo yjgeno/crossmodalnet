@@ -87,3 +87,5 @@ if __name__ == "__main__":
     if args.denoise:
         print("Running the denoise step in cTPnet")
         denoise_data(X_pth=data_configs["X_train_pth"], X_output=Path(data_configs["X_train_pth"]).parent)
+
+        

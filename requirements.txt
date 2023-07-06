@@ -173,7 +173,6 @@ scanpydoc==0.7.5
 scikit-learn @ file:///D:/bld/scikit-learn_1659726281030/work
 scikit-misc==0.1.4
 scipy==1.9.1
-sctransfer
 scTenifoldpy @ git+https://github.com/qwerty239qwe/scTenifoldpy.git@655787d20c6b9d7176c33752c06d778a62487f54
 seaborn @ file:///home/conda/feedstock_root/build_artifacts/seaborn-split_1662491375569/work
 Send2Trash==1.8.0
