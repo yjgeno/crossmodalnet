@@ -11,7 +11,7 @@ from time import time
 from pathlib import Path
 
 from tqdm import tqdm
-from src.baselines.utils import *
+from baselines.utils import *
 
 
 model_dic = {"lr": LinearRegression,
@@ -41,11 +41,11 @@ def train_and_predict(X_train,
             continue
         X_test_part, y_test_part = X_test, y_test[:, row]
         if model_name == "lgb":
-          model = model_dic[model_name](n_estimators=1000, random_state=42, **params)
+            model = model_dic[model_name](n_estimators=1000, random_state=42, **params)
         elif model_name == "ridge":
-          model = model_dic[model_name](random_state=42, **params)
+            model = model_dic[model_name](random_state=42, **params)
         else:
-          model = model_dic[model_name](**params)
+            model = model_dic[model_name](**params)
         model.fit(X.X.toarray(), np.ravel(y.X.toarray()))
         y_train_pred = np.expand_dims(model.predict(X.X.toarray()),axis=1)
         y_test_pred = np.expand_dims(model.predict(X_test_part.X.toarray()),axis=1)
@@ -60,7 +60,7 @@ def train_and_predict(X_train,
             "rmse_test_mean": mean_squared_error(y_test_part.X.toarray(), y_test_pred)
         }
         if path_to_save is not None:
-          pd.DataFrame(result_dic).to_csv(path_to_save)
+            pd.DataFrame(result_dic).to_csv(path_to_save)
     y_train_concat = np.concatenate(y_train_list, axis=1)
     y_train_pred_concat = np.concatenate(y_train_pred_list, axis=1)
     y_test_concat = np.concatenate(y_test_list, axis=1)
@@ -92,11 +92,11 @@ def train_eval_time(X_train,
     for i, row in tqdm(y_train.var["gene_id"].items()):
         X, y = X_train, y_train[:, row]
         if model_name == "lgb":
-          model = model_dic[model_name](n_estimators=1000, random_state=42, **params)
+            model = model_dic[model_name](n_estimators=1000, random_state=42, **params)
         elif model_name == "ridge":
-          model = model_dic[model_name](random_state=42, **params)
+            model = model_dic[model_name](random_state=42, **params)
         else:
-          model = model_dic[model_name](**params)
+            model = model_dic[model_name](**params)
         model.fit(X.X.toarray(), np.ravel(y.X.toarray()))
     return time() - start_time
 
@@ -109,8 +109,11 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--hparam", help="Path to hparam configs", default='lgb_hparams')
     parser.add_argument("-e", "--eval_time", help="To evaluate training time or not",
                         action='store_true')
-    parser.add_argument("-m", "--model", help="Name of trained model, choose from ['lgb', 'lr', 'ridge']",
+    parser.add_argument("-n", "--model", help="Name of trained model, choose from ['lgb', 'lr', 'ridge']",
                         default="lgb")
+    parser.add_argument("-m", "--eval_memory", help="To evaluate memory usage or not",
+                        action='store_true')
+
     args = parser.parse_args()
 
     cfd = Path(__file__).resolve().parent.parent / "configs"
@@ -130,12 +133,21 @@ if __name__ == "__main__":
                                       y_train,
                                       n_obs=int(args.obs),
                                       n_vars=int(args.var))
-        est_time = train_eval_time(X_train=X_train,
-                                   y_train=y_train,
-                                   params=best_hparams,
-                                   model_name=args.model)
+        if args.eval_memory:
+            with open(Path(data_configs["result_dir_pth"]) / data_configs["mem_file_name"], "w+") as fp:
+                est_time = train_eval_time_mem(train_eval_time, fp)(X_train=X_train,
+                                                                    y_train=y_train,
+                                                                    params=best_hparams,
+                                                                    model_name=args.model)
+            est_mem = extract_peak_mem(Path(data_configs["result_dir_pth"]) / data_configs["mem_file_name"])
+        else:
+            est_time = train_eval_time(X_train=X_train,
+                                      y_train=y_train,
+                                      params=best_hparams,
+                                      model_name=args.model)
+            est_mem = None
         result_dir = Path(data_configs["result_dir_pth"]).mkdir(parents=True, exist_ok=True)
-        print_info(est_time, n_obs=int(args.obs), n_var=int(args.var), hparams=best_hparams,
+        print_info(est_time, n_obs=int(args.obs), n_var=int(args.var), hparams=best_hparams, memory_used=est_mem,
                    file_name= Path(data_configs["result_dir_pth"]) / f"{args.model}.csv")
     else:
         if args.model == "lgb":

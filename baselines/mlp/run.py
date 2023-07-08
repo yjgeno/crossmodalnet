@@ -15,7 +15,7 @@ from ray.tune.schedulers import ASHAScheduler
 from ray.tune import CLIReporter
 from .model import Module
 from .data import scDataset
-from src.baselines.utils import *
+from baselines.utils import *
 from pathlib import Path
 
 
@@ -51,7 +51,7 @@ def train(hparams, data_configs, use_ncorr_loss=False):
                         min_delta=0.00, patience=3,
                         verbose=False, mode="max"),
                   TuneReportCallback({"loss": "val_loss",
-                            "pearsonR": "val_pearsonR"},
+                                    "pearsonR": "val_pearsonR"},
                           on="validation_end")
               ],
               devices=1)
@@ -172,6 +172,8 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--hparam", help="Path to hparam configs", default='mlp_hparams')
     parser.add_argument("-e", "--eval_time", help="To evaluate training time or not",
                         action='store_true')
+    parser.add_argument("-m", "--eval_memory", help="To evaluate memory usage or not",
+                        action='store_true')
     args = parser.parse_args()
     if args.ncorr:
         hparams.update({"loss": tune.choice(["huber_loss", "mse_loss"])})
@@ -188,9 +190,16 @@ if __name__ == "__main__":
         train_ds = scDataset.init_with_data(X_train, y_train)
         best_hparams = load_config((cfd / args.hparam).with_suffix(".yml")) \
             if (cfd / args.hparam).with_suffix(".yml").is_file() else load_config(args.hparam)
-        est_time = train_eval_time(best_hparams, train_ds, use_ncorr_loss=args.ncorr)
+        
+        if args.eval_memory:
+            with open(Path(data_configs["result_dir_pth"]) / data_configs["mem_file_name"], "w+") as fp:
+                est_time = train_eval_time_mem(train_eval_time, fp)(hparams=best_hparams, train_set=train_ds, use_ncorr_loss=args.ncorr)
+            est_mem = extract_peak_mem(Path(data_configs["result_dir_pth"]) / data_configs["mem_file_name"])
+        else:
+            est_time = train_eval_time(best_hparams, train_ds, use_ncorr_loss=args.ncorr)
+            est_mem = None
         result_dir = Path(data_configs["result_dir_pth"]).mkdir(parents=True, exist_ok=True)
-        print_info(est_time, n_obs=int(args.obs), n_var=int(args.var), hparams=best_hparams,
+        print_info(est_time, n_obs=int(args.obs), n_var=int(args.var), hparams=best_hparams, memory_used=est_mem,
                    file_name= Path(data_configs["result_dir_pth"]) / f"mlp.csv")
     else:
         tune_model(hparams, data_configs, use_ncorr_loss=args.ncorr)

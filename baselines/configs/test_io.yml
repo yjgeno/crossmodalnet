@@ -1,5 +1,6 @@
-X_train_pth: C:/Users/qwert/PycharmProjects/Multimodal_22/data/toy_x_train.h5ad
-y_train_pth: C:/Users/qwert/PycharmProjects/Multimodal_22/data/toy_y_train.h5ad
-X_test_pth: C:/Users/qwert/PycharmProjects/Multimodal_22/data/toy_x_test.h5ad
-y_test_pth: C:/Users/qwert/PycharmProjects/Multimodal_22/data/toy_y_test.h5ad
-result_dir_pth: C:/Users/qwert/PycharmProjects/Multimodal_22/results/
+X_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_x_train.h5ad
+y_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_y_train.h5ad
+X_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_x_test.h5ad
+y_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_y_test.h5ad
+result_dir_pth: C:/Users/user/PycharmProjects/Multimodal_22/results/
+mem_file_name: mem_profile.txt

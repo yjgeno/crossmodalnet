@@ -1,0 +1,6 @@
+torch
+scikit-learn
+ray
+pytorch-lightning
+scanpy
+memory_profiler
