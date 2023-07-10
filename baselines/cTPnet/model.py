@@ -47,8 +47,7 @@ class cTPnetModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         X, y = batch["X"].to(torch.float32), batch["y"].to(torch.float32)
-        y_pred = self.model(X,
-                            )
+        y_pred = self.model(X)
         loss = self.loss(y_pred, y)
         metrics = self.model.calc_metrics(y_pred, y)
         self.log("train_loss", loss, prog_bar=True)
@@ -67,7 +66,7 @@ class cTPnetModule(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         X, y = batch["X"].to(torch.float32), batch["y"].to(torch.float32)
         y_pred = self.model(X)
-        loss = self.mse_loss(y_pred, y)
+        loss = self.loss(y_pred, y)
         metrics = self.model.calc_metrics(y_pred, y)
         self._test_outputs.append({"loss": loss, **metrics})
         return {"loss": loss, **metrics}
@@ -99,3 +98,7 @@ class cTPnetModule(pl.LightningModule):
         y_pred = self.model(X).cpu().numpy()
         metrics = self.model.calc_metrics(y_pred, y)
         return y_pred, metrics
+    
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.model.parameters(), lr=0.001,amsgrad=True, weight_decay=0.001)
+        return [optimizer]

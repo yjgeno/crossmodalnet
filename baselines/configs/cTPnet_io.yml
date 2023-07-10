@@ -1,2 +1,10 @@
 X_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/toy_x_train.h5ad
-X_train_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP
+y_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/toy_y_train.h5ad
+X_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/toy_x_test.h5ad
+y_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/toy_y_test.h5ad
+X_train_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/p_train
+X_test_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/p_test
+pretrained_weights: C:/Users/user/PycharmProjects/Multimodal_22/data/toy_data_for_cTP/human_Immune.hdf5
+result_dir_pth: C:/Users/user/PycharmProjects/Multimodal_22/results/
+mem_file_name: mem_profile.txt
+name: cTPNet
