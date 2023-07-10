@@ -26,7 +26,7 @@ def denoise_data(X_pth,
                  X_output,
                  pretrained):
     converter = H5adToMtx(X_path=X_pth)
-    converter.run(save_path=X_output, var_func=_process_toy_data_var)
+    converter.run(save_path=X_output, var_func=None)
     savexr(X_output, X_output, pretrained)
 
 
@@ -86,7 +86,6 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--io", help="Path to io configs", default='io')
     parser.add_argument("-o", "--obs", help="Number of observations", default='300')
     parser.add_argument("-v", "--var", help="Number of variables", default='1000')
-    parser.add_argument("-p", "--hparam", help="Path to hparam configs", default='lgb_hparams')
     parser.add_argument("-e", "--eval_time", help="To evaluate training time or not",
                         action='store_true')
     parser.add_argument("-d", "--denoise", help="Whether to run denoise step",

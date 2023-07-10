@@ -6,7 +6,8 @@ import re
 from scipy.stats import loguniform, uniform, randint
 from memory_profiler import profile
 import scanpy as sc
-from scipy.io import mmwrite
+from anndata import AnnData
+from scipy.io import mmwrite, mmread
 from pathlib import Path
 
 
@@ -35,6 +36,12 @@ class H5adToMtx:
         obs = self._process_obs(self.data.obs, obs_func)
         var.to_csv(Path(save_path) / "var.csv")
         obs.to_csv(Path(save_path) / "obs.csv")
+
+
+def load_mtx_dir(mtx, var, obs):
+    with open(mtx) as f:
+        x = mmread(f)
+    return AnnData(X=x, var=pd.read_csv(var, index_col=0), obs=pd.read_csv(obs, index_col=0))
 
 
 def get_subset(X_data, y_data, n_obs, n_vars, random_state=42):
