@@ -30,6 +30,8 @@ load_data <- function(mtx, var, obs) {
   mtx
 }
 
+args <- docopt(doc)
+
 train_x_folder <- args$train_x
 train_y_folder <- args$train_y
 test_x_folder <- args$test_x
@@ -46,20 +48,29 @@ train_y_mtx <- load_data(mtx=file.path(train_y_folder, "x.mtx"),
                          var=file.path(train_y_folder, "var.csv"),
                          obs=file.path(train_y_folder, "obs.csv"))
 
+print("loaded data")
 adt <- CreateAssayObject(counts=train_y_mtx)
 train_seurat_obj[["ADT"]] <- adt
-train_seurat_obj@meta.data <- obs
+
+meta <- read.csv(file.path(train_y_folder, "obs.csv"))
+train_seurat_obj@meta.data <- meta
+
+print("normalizing RNA data")
 DefaultAssay(train_seurat_obj) <- 'RNA'
 train_seurat_obj <- NormalizeData(train_seurat_obj) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()
 
+print("normalizing ADT data")
 DefaultAssay(train_seurat_obj) <- 'ADT'
 VariableFeatures(train_seurat_obj) <- rownames(train_seurat_obj[["ADT"]])
 train_seurat_obj <- ScaleData(train_seurat_obj) %>% RunPCA(reduction.name = 'apca')
+
+print("finding neighbors")
 train_seurat_obj <- FindMultiModalNeighbors(
   train_seurat_obj, reduction.list = list("pca", "apca"), 
   dims.list = list(1:30, 1:18), modality.weight.name = "RNA.weight"
 )
 
+print("running SPCA")
 DefaultAssay(train_seurat_obj) <- 'RNA'
 train_seurat_obj <- RunUMAP(train_seurat_obj, nn.name = "weighted.nn", reduction.name = "wnn.umap", 
                       reduction.key = "wnnUMAP_", 
@@ -79,9 +90,11 @@ query <- NormalizeData(query)
 query <- FindVariableFeatures(query)
 query <- ScaleData(query)
 
-query <- RunUMAP(query, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
-query <- FindClusters(query, graph.name = "wsnn", algorithm = 3, resolution = 2, verbose = FALSE)
-query <- RunSPCA(query, graph = 'wsnn')
+# query <- RunPCA(query)
+
+# query <- RunUMAP(query, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
+# query <- FindClusters(query, graph.name = "wsnn", algorithm = 3, resolution = 2, verbose = FALSE)
+# query <- RunSPCA(query, graph = 'wsnn')
 
 anchors <- FindTransferAnchors(
   reference = train_seurat_obj,

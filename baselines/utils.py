@@ -41,7 +41,7 @@ class H5adToMtx:
 def load_mtx_dir(mtx, var, obs):
     with open(mtx) as f:
         x = mmread(f)
-    return AnnData(X=x, var=pd.read_csv(var, index_col=0), obs=pd.read_csv(obs, index_col=0))
+    return AnnData(X=x.T, var=pd.read_csv(var, index_col=0), obs=pd.read_csv(obs, index_col=0))
 
 
 def get_subset(X_data, y_data, n_obs, n_vars, random_state=42):

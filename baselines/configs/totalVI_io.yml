@@ -2,9 +2,8 @@ X_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_t
 y_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_train_y_raw.h5ad
 X_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_test_x_hvg3k.h5ad
 y_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_test_y_raw.h5ad
-X_train_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/seurat_p_train_x
-y_train_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/seurat_p_train_y
-X_test_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/seurat_p_test
-result_dir_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/seurat_results/
+model_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/totalVI_results/model
+result_dir_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/totalVI_results/
+batch_key: week
 mem_file_name: mem_profile.txt
-name: seurat
+name: totalVI

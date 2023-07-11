@@ -1,6 +1,6 @@
-X_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_train_x.h5ad
+X_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_train_x_hvg3k.h5ad
 y_train_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_train_y_norm.h5ad
-X_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_test_x.h5ad
+X_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_test_x_hvg3k.h5ad
 y_test_pth: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/cite_test_y_norm.h5ad
 X_train_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/p_train
 X_test_processed_dir: C:/Users/user/PycharmProjects/Multimodal_22/data/cite_seen_2/p_test

@@ -7,10 +7,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from ray import tune, air
-from ray.tune.integration.pytorch_lightning import TuneReportCallback
-from ray.tune.schedulers import ASHAScheduler
-from ray.tune import CLIReporter
 from .model import cTPnetModule
 from .data import cTPnetDataset
 from .data import savexr
@@ -58,9 +54,6 @@ def train(data_configs):
                   EarlyStopping(monitor="val_loss",
                         min_delta=0.001, patience=30,  # as described in https://github.com/zhouzilu/cTPnet/blob/master/extdata/training_05152020.py
                         verbose=False, mode="min"),
-                  TuneReportCallback({"loss": "val_loss",
-                                    "pearsonR": "val_pearsonR"},
-                                    on="validation_end")
               ],
               devices=1)
     trainer.fit(model, train_dl, val_dl)
