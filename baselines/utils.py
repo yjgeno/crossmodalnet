@@ -44,10 +44,10 @@ def load_mtx_dir(mtx, var, obs):
     return AnnData(X=x.T, var=pd.read_csv(var, index_col=0), obs=pd.read_csv(obs, index_col=0))
 
 
-def get_subset(X_data, y_data, n_obs, n_vars, random_state=42):
+def get_subset(X_data, y_data, n_obs, n_vars, replace=True, random_state=42):
     rng = np.random.default_rng(random_state)
-    obs_idx = rng.choice(X_data.obs.shape[0], n_obs)
-    var_idx = rng.choice(X_data.var.shape[0], n_vars)
+    obs_idx = rng.choice(X_data.obs.shape[0], n_obs, replace=replace)
+    var_idx = rng.choice(X_data.var.shape[0], n_vars, replace=replace)
     return X_data[obs_idx, var_idx], y_data[obs_idx, :]
 
 
