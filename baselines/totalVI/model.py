@@ -11,6 +11,34 @@ from scvi.model import TOTALVI
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy import stats
 from anndata import AnnData
+from time import time
+
+
+def eval_time(adata_X, 
+              y_train):
+    adata_X.obsm["protein_expression"] = pd.DataFrame(data=y_train.X.toarray(), index=y_train.obs.index, columns=y_train.var.index)
+    del y_train
+
+    adata_X.layers["counts"] = np.expm1(adata_X.X)
+    adata_X.layers["counts"] = adata_X.layers["counts"].astype(int)
+    adata_X.raw = adata_X
+    TOTALVI.setup_anndata(
+        adata_X,
+        layer="counts",
+        protein_expression_obsm_key="protein_expression",
+    )
+
+    arches_params = dict(
+        use_layer_norm="both",
+        use_batch_norm="none",
+        n_layers_decoder=2,
+        n_layers_encoder=2,
+    )
+    start_time = time()
+    vae = TOTALVI(adata_X, **arches_params)
+    vae.train(max_epochs=200)
+    return time() - start_time
+
 
 
 def make_data(x_train_path,
@@ -96,7 +124,7 @@ def calc_metrics(y_pred_save_path,
     sc.pp.normalize_total(y_true)
     sc.pp.log1p(y_true)
 
-    y_pred = AnnData(pd.read_csv(y_pred_save_path))
+    y_pred = AnnData(pd.read_csv(y_pred_save_path, index_col=0))
     sc.pp.normalize_total(y_pred)
     sc.pp.log1p(y_pred)
 
