@@ -1,8 +1,10 @@
+import json
 import os
+
 import torch
 import torch.nn as nn
+
 from .loss import NCorrLoss
-import matplotlib.pyplot as plt
 
 
 class MLP(nn.Module):
@@ -157,56 +159,28 @@ class CrossmodalNet(nn.Module):
         return self.patience_trials >= self.hparams["patience"]
 
 
-# class TimeEncoding(nn.Module):
-#     def __init__(self, n_out=512):
-#         super(TimeEncoding, self).__init__()
-#         self.n_out = n_out
-#         self.w0 = nn.parameter.Parameter(torch.randn(n_out, 1))
-#         self.b0 = nn.parameter.Parameter(torch.randn(n_out, 1))
-#         self.fn = torch.exp
-
-#     def forward(self, tau, fn=False):
-#         t_len = len(tau)
-#         tau = tau.expand(self.n_out, t_len) # expand 0
-#         w = self.w0.expand(self.n_out, t_len) # expand 1
-#         t_emb = torch.mul(tau, w) + self.b0
-#         # print(t_emb.shape)
-#         if fn:
-#             return self.fn(t_emb.T)
-#         return t_emb.T
-
-#     @staticmethod
-#     def plot(pe):
-#         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,3))
-#         pos = ax.imshow(pe, cmap="Reds", extent=(1,pe.shape[1]+1,pe.shape[0]+1,1))
-#         fig.colorbar(pos, ax=ax)
-#         ax.set_xlabel("Hidden dimension")
-#         ax.set_ylabel("Discrete time")
-#         ax.set_xticks([1]+[i for i in range(1,1+pe.shape[1])])
-#         ax.set_yticks([1]+[i for i in range(1,1+pe.shape[0])])
-#         plt.show()
+def save_model(model, path: str = ".", name: str = "CrossmodalNet"):
+    """Save model state_dict to ``{path}/{name}.th``."""
+    if not isinstance(model, CrossmodalNet):
+        raise TypeError(f"model type '{type(model)}' not supported")
+    os.makedirs(path, exist_ok=True)
+    return torch.save(model.state_dict(), os.path.join(path, f"{name}.th"))
 
 
-def save_model(model, name: str = "CrossmodalNet"):
-    from torch import save
-    if isinstance(model, CrossmodalNet):
-        return save(model.state_dict(), os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{name}.th'))
-    raise ValueError("model type '%s' not supported!" % str(type(model)))
-
-def load_model(path, **kwargs): # num_genes, num_drugs, loss_ae
-    from torch import load
+def load_model(path, **kwargs):
     r = CrossmodalNet(**kwargs)
-    r.load_state_dict(load(path, map_location='cpu'))
+    r.load_state_dict(torch.load(path, map_location="cpu"))
     return r
 
-def save_hparams(model, name: str = "hparams"):
-    import json
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{name}.json"), "w") as f:
+
+def save_hparams(model, path: str = ".", name: str = "hparams"):
+    """Save model hyperparameters to ``{path}/{name}.json``."""
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, f"{name}.json"), "w") as f:
         json.dump(model.hparams, f)
 
+
 def load_hparams(path, **kwargs):
-    import json
-    with open(path, "r") as f:
-        hparams_dict = json.load(f, **kwargs)
-    return hparams_dict
+    with open(path) as f:
+        return json.load(f, **kwargs)
 

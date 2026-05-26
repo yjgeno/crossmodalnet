@@ -4,7 +4,7 @@ import scanpy as sc
 import scipy
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
-from .utils import check_training_data, sc_preprocess, pretransformer
+from .utils import check_training_data, pretransformer
 
 
 class sc_Dataset(Dataset):
@@ -55,7 +55,7 @@ class sc_Dataset(Dataset):
         self.unique_day = np.sort(np.unique(data.obs[time_key].values)) # [2,3,4,7]
         # self.celltype = data.obs[celltype_key].to_numpy()
         # self.unique_celltype = np.unique(data.obs[celltype_key].values)
-        encoder_day = OneHotEncoder(sparse=False)
+        encoder_day = OneHotEncoder(sparse_output=False)
         encoder_day.fit(self.unique_day.reshape(-1, 1))  # (# day, 1)
         # self.encoder_day = encoder_day
         self.day_dict = dict(
