@@ -1,10 +1,11 @@
-import torch
-from torch.utils.data import Dataset, DataLoader
+import numpy as np
 import scanpy as sc
 import scipy
-import numpy as np
+import torch
 from sklearn.preprocessing import OneHotEncoder
-from .utils import check_training_data, sc_preprocess, pretransformer
+from torch.utils.data import DataLoader, Dataset
+
+from .utils import check_training_data, pretransformer
 
 
 class sc_Dataset(Dataset):
@@ -55,15 +56,16 @@ class sc_Dataset(Dataset):
         self.unique_day = np.sort(np.unique(data.obs[time_key].values)) # [2,3,4,7]
         # self.celltype = data.obs[celltype_key].to_numpy()
         # self.unique_celltype = np.unique(data.obs[celltype_key].values)
-        encoder_day = OneHotEncoder(sparse=False)
+        encoder_day = OneHotEncoder(sparse_output=False)
         encoder_day.fit(self.unique_day.reshape(-1, 1))  # (# day, 1)
         # self.encoder_day = encoder_day
         self.day_dict = dict(
                 zip(
                     self.unique_day,
                     torch.Tensor(encoder_day.transform(self.unique_day.reshape(-1, 1))),
+                    strict=True,
                 )
-            )    
+            )
         # encoder_celltype = OneHotEncoder(sparse=False)
         # encoder_celltype.fit(self.unique_celltype.reshape(-1, 1))  # (# celltype, 1)
         # # self.encoder_celltype = encoder_celltype

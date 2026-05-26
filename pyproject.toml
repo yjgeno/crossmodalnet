@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crossmodalnet"
+version = "0.1.0"
+description = "Interpretable modeling of time-resolved single-cell gene-protein expression."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Yongjian Yang", email = "yjyang027@gmail.com" },
+]
+keywords = [
+    "single-cell",
+    "multimodal",
+    "deep-learning",
+    "cite-seq",
+    "bioinformatics",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "anndata>=0.9",
+    "matplotlib>=3.5",
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scanpy>=1.9",
+    "scikit-learn>=1.2",
+    "scipy>=1.10",
+    "tensorboard>=2.10",
+    "torch>=1.13",
+]
+
+[project.optional-dependencies]
+tune = ["ray[tune]>=2.7"]
+magic = ["magic-impute>=3.0"]
+viz = ["mycolorpy>=1.5"]
+dev = [
+    "build>=1.0",
+    "pytest>=7.0",
+    "ruff>=0.1",
+    "twine>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yjgeno/crossmodalnet"
+Repository = "https://github.com/yjgeno/crossmodalnet"
+Preprint = "https://www.biorxiv.org/content/10.1101/2023.05.16.541011v2"
+
+[project.scripts]
+crossmodalnet-train = "crossmodalnet.cli:train_main"
+crossmodalnet-tune = "crossmodalnet.cli:tune_main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crossmodalnet"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/crossmodalnet",
+    "tests",
+    "LICENSE",
+    "README.md",
+    "pyproject.toml",
+]
+exclude = [
+    "baselines/",
+    "nb/",
+    "data/",
+    "*.png",
+    "*.h5ad",
+    "logger/",
+    "models/",
+    "toy_data/",
+    "preds/",
+    "hparams/",
+    "environment.yml",
+    "requirements*.txt",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
