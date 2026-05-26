@@ -1,5 +1,5 @@
-from importlib import resources
 import warnings
+from importlib import resources
 
 import numpy as np
 import pandas as pd
@@ -98,7 +98,7 @@ def split_data(adata, split=0.15, cell_id_test=None, random_state=0, time_key="d
 def corr_score(y_true, y_pred):
     """Returns the average of each sample's Pearson correlation coefficient."""
     if np.std(y_true) == 0 or np.std(y_pred) == 0:
-        warnings.warn("Standard deviation equals to zero")
+        warnings.warn("Standard deviation equals to zero", stacklevel=2)
     corrsum = 0
     for i in range(len(y_true)):
         corrsum += np.corrcoef(y_true[i], y_pred[i])[1, 0]

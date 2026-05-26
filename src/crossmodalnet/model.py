@@ -12,7 +12,7 @@ class MLP(nn.Module):
     A multilayer perceptron class.
     """
     def __init__(self, sizes, batch_norm=True):
-        super(MLP, self).__init__()
+        super().__init__()
         layers = []
         for s in range(len(sizes) - 1):
             layers += [
@@ -22,7 +22,7 @@ class MLP(nn.Module):
                 else None,
                 nn.ReLU(),
             ]
-        layers = [l for l in layers if l is not None][:-1]
+        layers = [layer for layer in layers if layer is not None][:-1]
         self.network = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -42,7 +42,7 @@ class CrossmodalNet(nn.Module):
         hparams_dict: dict = None,
         **kwargs
     ):
-        super(CrossmodalNet, self).__init__()
+        super().__init__()
         self.n_input = n_input 
         self.n_output = n_output # dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

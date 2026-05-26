@@ -1,6 +1,6 @@
 """CrossmodalNet: interpretable modeling of time-resolved single-cell gene-protein expression."""
 
-from .data import sc_Dataset, load_data
+from .data import load_data, sc_Dataset
 from .loss import GaussNLLLoss, NBLoss, NCorrLoss
 from .model import (
     CrossmodalNet,

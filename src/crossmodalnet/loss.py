@@ -1,6 +1,6 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
 
 
@@ -14,7 +14,7 @@ class NBLoss(Loss_):
 
     """
     def __init__(self):
-        super(NBLoss, self).__init__()
+        super().__init__()
 
     def forward(self, pred_y, y, eps=1e-8):
         """Negative binomial negative log-likelihood.
@@ -47,7 +47,7 @@ class GaussNLLLoss(Loss_):
     Eq.(10) from "Estimating the Mean and Variance of the Target Probability Distribution".
     """
     def __init__(self, full: bool = False, reduction: str = "mean"):
-        super(GaussNLLLoss, self).__init__()
+        super().__init__()
         self.full = full
         self.reduction = reduction
 
@@ -63,7 +63,7 @@ class NCorrLoss(Loss_):
     """
 
     def __init__(self):
-        super(NCorrLoss, self).__init__()
+        super().__init__()
 
     @staticmethod
     def tile(y, method:str = "mean"):

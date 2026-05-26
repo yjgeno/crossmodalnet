@@ -148,13 +148,7 @@ def train(args):
         )
         if args.verbose:
             print(
-                "(Train) epoch: {:03d}, global_step: {:d}, loss: {:.4f}, loss_adv: {:.4f}, corr: {:.4f}".format(
-                    epoch,
-                    global_step,
-                    loss_sum / max(local_step_ae, 1),
-                    loss_adv_sum / local_step_adv if local_step_adv > 0 else 0.0,
-                    corr_sum_train / max(local_step_ae, 1),
-                )
+                f"(Train) epoch: {epoch:03d}, global_step: {global_step:d}, loss: {loss_sum / max(local_step_ae, 1):.4f}, loss_adv: {loss_adv_sum / local_step_adv if local_step_adv > 0 else 0.0:.4f}, corr: {corr_sum_train / max(local_step_ae, 1):.4f}"
             )
 
         model.eval()
@@ -176,9 +170,7 @@ def train(args):
             )
             if args.verbose:
                 print(
-                    "(Val) epoch: {:03d}, global_step: {:d}, corr: {:.4f}".format(
-                        epoch, global_step, corr_sum_val / max(len(val_set), 1)
-                    )
+                    f"(Val) epoch: {epoch:03d}, global_step: {global_step:d}, corr: {corr_sum_val / max(len(val_set), 1):.4f}"
                 )
 
         stop = model.early_stopping(corr_sum_val / max(len(val_set), 1))

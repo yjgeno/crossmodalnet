@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import torch
 
 from crossmodalnet.model import CrossmodalNet, load_hparams, save_hparams, save_model
